@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DS SNT · Le robot Python</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f6f3ea; --card:#fffdf8; --ink:#1c2233; --ink2:#4a5168; --muted:#8a8f9e;
+  --line:#d8d2c2; --grid:#cfc8b6;
+  --robot:#4b55d6; --robot-soft:#e5e7fb;
+  --coral:#ec6a55; --coral-soft:#fde6e1;
+  --mint:#14a07a; --mint-soft:#dcf3eb;
+  --sun:#f2b33d; --sun-soft:#fdf0d3;
+  --code:#fffbe3; --code-line:#efe6b8;
+  --shadow:4px 4px 0 var(--ink);
+  --r:14px;
+  --f-display:"Bricolage Grotesque",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background-color:var(--paper);
+  background-image:linear-gradient(rgba(28,34,51,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(28,34,51,.045) 1px,transparent 1px);
+  background-size:22px 22px;
+  color:var(--ink); font-family:var(--f-body); font-size:17px; line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;cursor:pointer}
+input{font:inherit}
+h1,h2,h3{font-family:var(--f-display);line-height:1.1;margin:0}
+.hidden{display:none!important}
+.wrap{max-width:1180px;margin:0 auto;padding:0 18px}
+
+/* ---------- boutons ---------- */
+.btn{display:inline-flex;align-items:center;gap:8px;border:2px solid var(--ink);background:var(--card);border-radius:12px;padding:10px 16px;font-weight:700;box-shadow:3px 3px 0 var(--ink);transition:transform .08s,box-shadow .08s}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.btn.primary{background:var(--robot);color:#fff}
+.btn.coral{background:var(--coral);color:#fff}
+.btn.mint{background:var(--mint);color:#fff}
+.btn.small{padding:6px 11px;font-size:15px;border-radius:10px;box-shadow:2px 2px 0 var(--ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:2px 2px 0 var(--ink)}
+.btn.big{font-size:20px;padding:14px 24px}
+
+/* ---------- accueil ---------- */
+#s-home{min-height:100vh;display:grid;place-items:center;padding:30px 16px}
+.home-card{background:var(--card);border:2.5px solid var(--ink);border-radius:22px;box-shadow:8px 8px 0 var(--ink);max-width:760px;width:100%;overflow:hidden}
+.home-top{background:var(--robot);color:#fff;padding:26px 28px;display:flex;gap:20px;align-items:center;border-bottom:2.5px solid var(--ink)}
+.home-top h1{font-size:clamp(28px,5vw,42px);font-weight:800;letter-spacing:-.02em}
+.home-top p{margin:6px 0 0;opacity:.9}
+.home-body{padding:24px 28px 28px}
+.fields{display:grid;grid-template-columns:1fr 1fr 150px;gap:12px;margin:6px 0 18px}
+.field label{display:block;font-weight:700;font-size:14px;margin-bottom:4px}
+.field input{width:100%;border:2px solid var(--ink);border-radius:10px;padding:10px 12px;background:#fff}
+.field input:focus{outline:3px solid var(--sun);outline-offset:1px}
+.rules{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:0 0 22px;padding:0;list-style:none}
+.rules li{background:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;font-size:15px;display:flex;gap:10px;align-items:flex-start}
+.rules li b{font-family:var(--f-display)}
+.rules .ic{font-size:20px;line-height:1}
+.home-err{color:var(--coral);font-weight:700;min-height:1.4em;margin:-6px 0 10px}
+
+/* ---------- barre du haut ---------- */
+.topbar{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:2.5px solid var(--ink)}
+.topbar .wrap{display:flex;align-items:center;gap:14px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:800;font-size:20px;white-space:nowrap}
+.who{color:var(--ink2);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.timer{font-family:var(--f-mono);font-weight:600;font-size:18px;border:2px solid var(--ink);border-radius:999px;padding:5px 14px;background:var(--mint-soft);display:flex;gap:8px;align-items:center}
+.timer.warn{background:var(--sun-soft)}
+.timer.alert{background:var(--coral);color:#fff;animation:pulse 1s infinite}
+@keyframes pulse{50%{transform:scale(1.05)}}
+
+/* ---------- onglets des parties ---------- */
+.tabs{display:grid;grid-template-columns:repeat(4,1fr) .78fr;gap:12px;margin:22px 0 8px}
+.tab.defi{background:var(--sun-soft)}
+.tab.defi.locked{background:repeating-linear-gradient(-45deg,var(--card),var(--card) 8px,var(--paper) 8px,var(--paper) 16px);color:var(--muted)}
+.tab.defi.on{background:var(--sun);color:var(--ink)}
+.tab.defi.on .t2{color:var(--ink)}
+.levels{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.lvl{border:2px solid var(--ink);border-radius:999px;padding:4px 12px;font-weight:700;font-size:14px;background:var(--card);color:var(--muted)}
+.lvl.ok{background:var(--mint-soft);color:var(--ink)}
+.lvl.cur{background:var(--sun);color:var(--ink);box-shadow:2px 2px 0 var(--ink)}
+.hint{margin-top:10px;background:var(--robot-soft);border:2px dashed var(--robot);border-radius:12px;padding:10px 12px}
+.hint code,.cons code{font-family:var(--f-mono);background:var(--code);border:1px solid var(--code-line);border-radius:6px;padding:0 5px;font-size:14px}
+.win{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:var(--mint-soft);border:2px solid var(--ink);border-radius:12px;padding:12px 14px;margin-bottom:14px;animation:pop .4s}
+@keyframes pop{0%{transform:scale(.95);opacity:0}100%{transform:none;opacity:1}}
+.chip.en,.opt.code,.qw.code{font-family:var(--f-mono);font-weight:600}
+.qw.code{font-size:19px;background:var(--code);border:1.5px solid var(--code-line);border-radius:8px;padding:4px 10px;display:inline-block}
+/* ---------- présentation ---------- */
+#s-tour{min-height:100vh;display:grid;place-items:center;padding:30px 16px}
+.tour{background:var(--card);border:2.5px solid var(--ink);border-radius:22px;box-shadow:8px 8px 0 var(--ink);max-width:880px;width:100%;overflow:hidden}
+.tour-top{display:flex;align-items:center;gap:14px;padding:16px 24px;border-bottom:2.5px solid var(--ink);background:var(--paper)}
+.tour-top h2{font-size:22px;flex:1}
+.steps{display:flex;gap:6px}
+.steps i{width:28px;height:8px;border-radius:9px;border:1.5px solid var(--ink);background:var(--card)}
+.steps i.on{background:var(--robot)}
+.tour-body{padding:22px 24px;min-height:380px}
+.slide{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:center}
+.slide h3{font-size:28px;margin-bottom:10px;letter-spacing:-.01em}
+.slide p{margin:0 0 10px}
+.slide .try{background:var(--sun-soft);border:2px solid var(--ink);border-radius:12px;padding:8px 12px;font-weight:700;font-size:15px;margin-top:12px}
+.slide .ok-msg{color:var(--mint);font-weight:700;min-height:1.4em}
+.mock-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mock-tabs .tab{box-shadow:2px 2px 0 var(--ink);padding:9px 11px}
+.mock-tabs .tab .t1{font-size:15px}
+.kbd{font-family:var(--f-mono);font-size:13px;border:1.5px solid var(--ink);border-bottom-width:3px;border-radius:6px;padding:0 6px;background:#fff;white-space:nowrap}
+.tour-foot{display:flex;justify-content:space-between;gap:10px;padding:16px 24px;border-top:2px solid var(--line)}
+#demo-grid .two{grid-template-columns:auto auto;gap:14px}
+#demo-grid .codebox{font-size:14px}
+@media (max-width:760px){.slide{grid-template-columns:1fr}}
+.tab{text-align:left;border:2px solid var(--ink);background:var(--card);border-radius:var(--r);padding:12px 14px 12px;position:relative;box-shadow:3px 3px 0 var(--ink)}
+.tab .t1{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:700;font-size:18px}
+.tab .t2{font-size:13px;color:var(--ink2);margin-top:2px}
+.tab .bar{height:7px;border-radius:9px;background:var(--paper);border:1.5px solid var(--ink);margin-top:10px;overflow:hidden}
+.tab .bar i{display:block;height:100%;background:var(--mint);width:0;transition:width .3s}
+.tab .num{position:absolute;top:-11px;right:10px;background:var(--ink);color:#fff;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px}
+.tab.on{background:var(--robot);color:#fff}
+.tab.on .t2{color:#dfe2ff}
+
+/* ---------- parties / exercices ---------- */
+.part-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:26px 0 14px;flex-wrap:wrap}
+.part-head h2{font-size:clamp(26px,4vw,36px);font-weight:800;letter-spacing:-.02em}
+.part-head p{margin:4px 0 0;color:var(--ink2)}
+.memo{background:var(--card);border:2px dashed var(--ink2);border-radius:12px;padding:10px 14px;font-size:15px;max-width:560px}
+.memo code{font-family:var(--f-mono);background:var(--code);border:1px solid var(--code-line);border-radius:6px;padding:0 5px;font-size:14px}
+.ex{background:var(--card);border:2px solid var(--ink);border-radius:var(--r);box-shadow:var(--shadow);margin:0 0 22px;overflow:hidden}
+.ex-h{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:2px solid var(--ink);background:var(--paper)}
+.ex-n{font-family:var(--f-display);font-weight:800;background:var(--ink);color:#fff;border-radius:9px;padding:3px 10px;font-size:15px;white-space:nowrap}
+.ex-t{font-weight:700;flex:1}
+.ex-pts{font-size:13px;font-weight:700;border:1.5px solid var(--ink);border-radius:999px;padding:2px 9px;background:var(--card);white-space:nowrap}
+.ex-b{padding:16px}
+.ex-b p.cons{margin:0 0 12px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:start}
+.done-dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--ink);background:var(--card)}
+.done-dot.on{background:var(--mint)}
+.next-part{display:flex;justify-content:flex-end;margin:6px 0 40px;gap:10px}
+
+/* ---------- code affiché ---------- */
+.codebox{background:var(--code);border:2px solid var(--ink);border-radius:12px;font-family:var(--f-mono);font-size:16px;line-height:1.6;padding:10px 0;overflow:auto;counter-reset:ln}
+.codebox .ln{display:block;padding:0 14px 0 0;white-space:pre}
+.codebox .ln::before{counter-increment:ln;content:counter(ln);display:inline-block;width:2.4em;text-align:right;padding-right:12px;margin-right:6px;color:#b9ad78;border-right:1px solid var(--code-line);user-select:none}
+.kw{color:#a1287a;font-weight:600}.bi{color:#b4550e}.fn{color:#1f5fbf}.nu{color:#0e8a6b;font-weight:600}.cm{color:#8b8f99;font-style:italic}.md{color:#1c2233}
+.ig{box-shadow:inset 1.5px 0 0 rgba(75,85,214,.28)}
+.blank{font-family:var(--f-mono);font-size:15px;border:2px dashed var(--robot);background:#fff;border-radius:7px;padding:1px 6px;width:11ch;color:var(--robot);font-weight:600}
+.blank.num{width:5ch;text-align:center}
+.blank:focus{outline:none;border-style:solid;background:var(--robot-soft)}
+
+/* ---------- éditeur ---------- */
+.editor{display:flex;border:2px solid var(--ink);border-radius:12px;background:var(--code);overflow:hidden;font-family:var(--f-mono);font-size:16px;line-height:1.6;min-height:260px;position:relative}
+.editor .gut{padding:10px 0;min-width:3em;text-align:right;color:#b9ad78;border-right:1px solid var(--code-line);user-select:none;background:rgba(239,230,184,.35);white-space:pre;padding-right:10px;overflow:hidden}
+.editor .area{position:relative;flex:1;min-width:0}
+.editor pre,.editor textarea{margin:0;border:0;padding:10px 12px;font:inherit;line-height:inherit;white-space:pre;tab-size:4;position:absolute;inset:0;overflow:auto;letter-spacing:0}
+.editor pre{pointer-events:none;color:var(--ink)}
+.editor textarea{background:transparent;color:transparent;caret-color:var(--ink);resize:none;outline:none;overflow-wrap:normal}
+.editor textarea::selection{background:rgba(75,85,214,.25);color:transparent}
+.editor:focus-within{outline:3px solid var(--sun);outline-offset:1px}
+.ed-tools{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.ed-hint{font-size:13px;color:var(--ink2);margin-left:auto}
+.console{margin-top:10px;border:2px solid var(--ink);border-radius:10px;background:#20263a;color:#e8eaf4;font-family:var(--f-mono);font-size:14px;padding:10px 12px;min-height:46px;white-space:pre-wrap}
+.console .err{color:#ff9b8a}.console .ok{color:#7fe0bf}.console .dim{color:#9aa1b8}
+
+/* ---------- grille ---------- */
+.gridwrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+.gridsvg{background:#fff;border:2px solid var(--ink);border-radius:12px;touch-action:manipulation;user-select:none;max-width:100%;height:auto}
+.gl{stroke:var(--grid);stroke-width:1}
+.node{fill:var(--grid);pointer-events:none}
+.hit{fill:transparent;cursor:pointer}
+.hit:hover+.node,.node.hov{fill:var(--robot)}
+.trail{stroke:var(--robot);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.target{stroke:var(--mint);stroke-width:9;stroke-linecap:round;fill:none;opacity:.28}
+.wrong{stroke:var(--coral);stroke-width:5;stroke-linecap:round;fill:none}
+.preview{stroke:var(--robot);stroke-width:3;stroke-dasharray:6 6;opacity:.6;fill:none}
+.pen{fill:none;stroke:var(--coral);stroke-width:3}
+.pen-a{animation:pen 1.2s infinite;transform-box:fill-box;transform-origin:center}
+@keyframes pen{50%{transform:scale(1.35)}}
+.grid-tools{display:flex;gap:8px}
+.grid-msg{font-size:13px;color:var(--coral);min-height:1.2em;font-weight:700}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--ink2)}
+.legend i{display:inline-block;width:18px;height:6px;border-radius:4px;vertical-align:middle;margin-right:5px}
+
+/* ---------- vocabulaire ---------- */
+.match{display:grid;grid-template-columns:1fr 1fr;gap:14px 40px}
+.match .col{display:flex;flex-direction:column;gap:10px}
+.match .col h4{margin:0 0 2px;font-family:var(--f-display);font-size:15px;color:var(--ink2);display:flex;gap:6px;align-items:center}
+.chip{border:2px solid var(--ink);border-radius:12px;background:var(--card);padding:10px 12px;text-align:left;font-weight:700;display:flex;align-items:center;gap:10px;box-shadow:2px 2px 0 var(--ink);min-height:48px}
+.chip .tag{width:26px;height:26px;border-radius:50%;border:2px dashed var(--line);flex:none;display:grid;place-items:center;font-size:13px;color:#fff}
+.chip.sel{background:var(--sun-soft);outline:3px solid var(--sun)}
+.chip.en{font-style:normal}
+.qcms{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.qcm{border:2px solid var(--ink);border-radius:12px;padding:14px;background:var(--card)}
+.qcm .qp{font-size:14px;color:var(--ink2);margin-bottom:4px}
+.qcm .qw{font-family:var(--f-display);font-weight:700;font-size:21px;margin-bottom:10px}
+.qcm .opts{display:grid;gap:8px}
+.opt{border:2px solid var(--ink);background:#fff;border-radius:10px;padding:8px 12px;text-align:left;display:flex;gap:10px;align-items:center}
+.opt .l{font-family:var(--f-display);font-weight:800;width:24px;height:24px;border-radius:7px;background:var(--paper);border:1.5px solid var(--ink);display:grid;place-items:center;font-size:13px;flex:none}
+.opt.on{background:var(--robot);color:#fff}
+.opt.on .l{background:#fff;color:var(--robot)}
+
+/* ---------- modales, attente, résultats ---------- */
+.modal{position:fixed;inset:0;background:rgba(28,34,51,.55);display:grid;place-items:center;z-index:100;padding:16px}
+.modal .box{background:var(--card);border:2.5px solid var(--ink);border-radius:18px;box-shadow:8px 8px 0 var(--ink);max-width:480px;width:100%;padding:24px}
+.modal h3{font-size:24px;margin-bottom:8px}
+.modal .acts{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+.modal input{width:100%;border:2px solid var(--ink);border-radius:10px;padding:10px 12px;margin-top:8px}
+#s-wait{min-height:100vh;display:grid;place-items:center;text-align:center;padding:24px;background:var(--robot);background-image:radial-gradient(rgba(255,255,255,.12) 1.5px,transparent 1.5px);background-size:24px 24px;color:#fff}
+#s-wait h1{font-size:clamp(36px,7vw,64px);font-weight:800;letter-spacing:-.02em;margin:18px 0 8px}
+#s-wait p{font-size:20px;opacity:.92;margin:0 0 30px}
+.bot-float{animation:float 3s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-12px) rotate(-3deg)}}
+#s-res .wrap{padding-top:26px;padding-bottom:50px}
+.res-head{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center;background:var(--card);border:2.5px solid var(--ink);border-radius:20px;box-shadow:6px 6px 0 var(--ink);padding:22px 26px}
+.res-head h1{font-size:clamp(26px,4vw,38px);font-weight:800}
+.res-meta{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;color:var(--ink2);font-size:15px}
+.res-meta b{color:var(--ink)}
+.note{background:var(--robot);color:#fff;border:2.5px solid var(--ink);border-radius:18px;padding:12px 22px;text-align:center;box-shadow:4px 4px 0 var(--ink)}
+.note .v{font-family:var(--f-display);font-weight:800;font-size:54px;line-height:1}
+.note .s{font-size:15px;opacity:.85}
+.res-parts{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:20px 0}
+.rp{background:var(--card);border:2px solid var(--ink);border-radius:14px;padding:12px 14px}
+.rp .a{font-family:var(--f-display);font-weight:700}
+.rp .b{font-family:var(--f-display);font-size:28px;font-weight:800}
+.rtable{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border:2px solid var(--ink);border-radius:14px;overflow:hidden;margin-bottom:18px}
+.rtable th,.rtable td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-size:15px}
+.rtable th{background:var(--paper);font-family:var(--f-display)}
+.rtable tr:last-child td{border-bottom:0}
+.rtable .sc{white-space:nowrap;font-weight:700}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:13px;font-weight:700;border:1.5px solid var(--ink)}
+.pill.g{background:var(--mint-soft)}.pill.m{background:var(--sun-soft)}.pill.b{background:var(--coral-soft)}
+.det{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;align-items:flex-start}
+.det .codebox{font-size:13px;line-height:1.5;max-width:380px}
+.det svg{width:180px;height:auto}
+details summary{cursor:pointer;color:var(--robot);font-weight:700;font-size:14px}
+.res-acts{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+.flash{animation:flash .5s}
+@keyframes flash{30%{background:var(--coral-soft)}}
+
+@media (max-width:900px){
+  .tabs{grid-template-columns:repeat(2,1fr)}
+  .tab.defi{grid-column:1/-1}
+  .two{grid-template-columns:1fr}
+  .res-parts{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:620px){
+  body{font-size:16px}
+  .fields{grid-template-columns:1fr}
+  .rules{grid-template-columns:1fr}
+  .match{grid-template-columns:1fr 1fr;gap:10px}
+  .qcms{grid-template-columns:1fr}
+  .who,.brand span{display:none}
+  .res-head{grid-template-columns:1fr}
+  .wrap{padding:0 16px}
+}
+@media print{
+  body{background:#fff}
+  .res-acts,.topbar{display:none!important}
+  .res-head,.rp,.rtable,.note{box-shadow:none}
+  details{display:block}
+  details>*{display:block}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= ACCUEIL ================= -->
+<section id="s-home" class="hidden">
+  <div class="home-card">
+    <div class="home-top">
+      <div class="bot-float" id="home-bot"></div>
+      <div>
+        <h1>Le robot Python</h1>
+        <p>Devoir surveillé de SNT · Seconde · 1 h 30</p>
+      </div>
+    </div>
+    <div class="home-body">
+      <div class="fields">
+        <div class="field"><label for="i-nom">Nom</label><input id="i-nom" autocomplete="off"></div>
+        <div class="field"><label for="i-prenom">Prénom</label><input id="i-prenom" autocomplete="off"></div>
+        <div class="field"><label for="i-classe">Classe</label><input id="i-classe" placeholder="2nde 4" autocomplete="off"></div>
+      </div>
+      <ul class="rules">
+        <li><span class="ic">🧭</span><span><b>4 parties</b>, dans l'ordre que tu veux : clique sur les onglets.</span></li>
+        <li><span class="ic">⏱️</span><span><b>1 h 30</b> au total. Le chrono est affiché en haut.</span></li>
+        <li><span class="ic">💾</span><span>Tes réponses sont <b>enregistrées</b> au fur et à mesure.</span></li>
+        <li><span class="ic">🏁</span><span>Quand tu as fini (ou à la fin du temps), clique sur <b>Terminé</b>.</span></li>
+      </ul>
+      <div class="home-err" id="home-err"></div>
+      <button class="btn primary big" id="b-start">Commencer le DS →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRÉSENTATION ================= -->
+<section id="s-tour" class="hidden">
+  <div class="tour">
+    <div class="tour-top"><h2 id="tour-hello"></h2><div class="steps" id="tour-steps"></div></div>
+    <div class="tour-body" id="tour-body"></div>
+    <div class="tour-foot"><button class="btn" id="tour-prev">← Précédent</button><button class="btn primary" id="tour-next">Suivant →</button></div>
+  </div>
+</section>
+
+<!-- ================= DS ================= -->
+<section id="s-ds" class="hidden">
+  <div class="topbar"><div class="wrap">
+    <div class="brand"><svg width="30" height="30" viewBox="0 0 40 40" aria-hidden="true"><rect x="6" y="10" width="28" height="22" rx="7" fill="#4b55d6" stroke="#1c2233" stroke-width="2.5"/><circle cx="15" cy="21" r="3.5" fill="#fff"/><circle cx="25" cy="21" r="3.5" fill="#fff"/><line x1="20" y1="10" x2="20" y2="4" stroke="#1c2233" stroke-width="2.5"/><circle cx="20" cy="4" r="2.5" fill="#ec6a55"/></svg><span>Robot Python</span></div>
+    <div class="who" id="who"></div>
+    <div class="spacer"></div>
+    <div class="timer" id="timer">⏱ <span id="timer-v">90:00</span></div>
+    <button class="btn coral small" id="b-finish">🏁 Terminé</button>
+  </div></div>
+  <div class="wrap">
+    <nav class="tabs" id="tabs"></nav>
+    <main id="part"></main>
+  </div>
+</section>
+
+<!-- ================= ATTENTE ================= -->
+<section id="s-wait" class="hidden">
+  <div>
+    <div class="bot-float" id="wait-bot" style="display:inline-block"></div>
+    <h1>Attends le professeur</h1>
+    <p>Ton devoir est enregistré. Reste à ta place, sans toucher à l'ordinateur.</p>
+    <button class="btn big" id="b-results" style="color:var(--ink)">Voir les résultats</button>
+  </div>
+</section>
+
+<!-- ================= RÉSULTATS ================= -->
+<section id="s-res" class="hidden"><div class="wrap" id="res"></div></section>
+
+<div id="modal-root"></div>
+
+<script>
+/* ================= RÉGLAGES PROFESSEUR ================= */
+const CONFIG = {
+  DUREE_MIN: 90,        // durée de l'épreuve en minutes
+  ESSAIS: 3,            // nombre de tests « ▶ Tester » par exercice de code
+  CODE_PROF: "",        // si rempli (ex. "snt2"), ce code est demandé pour voir les résultats
+  TITRE: "DS SNT · Le robot Python"
+};
+
+/* ================= HASARD (graine) ================= */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function shuffle(arr,r){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function pick(arr,r){return arr[Math.floor(r()*arr.length)]}
+function ri(a,b,r){return a+Math.floor(r()*(b-a+1))}
+
+/* ================= MINI-INTERPRÉTEUR PYTHON (robot) ================= */
+const ROBOT_FUNCS=['avancer','droite','gauche'];
+class PyError extends Error{constructor(type,msg,line){super(msg);this.type=type;this.line=line}}
+
+function stripComment(s){
+  let q=null;
+  for(let i=0;i<s.length;i++){
+    const c=s[i];
+    if(q){ if(c===q) q=null; }
+    else if(c==='"'||c==="'") q=c;
+    else if(c==='#') return s.slice(0,i);
+  }
+  return s;
+}
+
+function parseStmt(L){
+  const t=L.text, n=L.n;
+  let depth=0;
+  for(const c of t){
+    if(c==='(') depth++;
+    else if(c===')'){ depth--; if(depth<0) throw new PyError('SyntaxError',"unmatched ')'",n); }
+  }
+  if(depth>0) throw new PyError('SyntaxError',"'(' was never closed",n);
+  let m;
+  if(/^from\b/.test(t)){
+    m=t.match(/^from\s+([A-Za-z_]\w*)\s+import\s+(.+)$/);
+    if(!m) throw new PyError('SyntaxError','invalid syntax',n);
+    const lst=m[2].trim();
+    let names;
+    if(lst==='*') names=['*'];
+    else{
+      names=lst.split(',').map(s=>s.trim());
+      if(names.some(x=>!/^[A-Za-z_]\w*$/.test(x))) throw new PyError('SyntaxError','invalid syntax',n);
+    }
+    return {type:'import',module:m[1],names,line:n};
+  }
+  if(/^import\b/.test(t)){
+    m=t.match(/^import\s+([A-Za-z_]\w*)$/);
+    if(!m) throw new PyError('SyntaxError','invalid syntax',n);
+    return {type:'importmod',module:m[1],line:n};
+  }
+  if(/^for\b/.test(t)){
+    if(!t.endsWith(':')) throw new PyError('SyntaxError',"expected ':'",n);
+    m=t.match(/^for\s+([A-Za-z_]\w*)\s+in\s+range\s*\((.*)\)\s*:$/);
+    if(!m) throw new PyError('SyntaxError','invalid syntax',n);
+    const args=m[2].split(',').map(x=>x.trim());
+    if(args.length>3||args.some(x=>x===''||!/^[A-Za-z_0-9+\-*\s()]+$/.test(x))) throw new PyError('SyntaxError','invalid syntax',n);
+    return {type:'for',var:m[1],args,line:n,body:[]};
+  }
+  if(/^(while|if|elif|else|def|class|with|try|except)\b/.test(t))
+    throw new PyError('Interdit',"seule la boucle for ... in range(...) est utilisable dans ce DS",n);
+  if(t.endsWith(':')) throw new PyError('SyntaxError','invalid syntax',n);
+  m=t.match(/^([A-Za-z_]\w*)\s*\(([^()]*)\)$/);
+  if(m) return {type:'call',name:m[1],args:m[2].trim(),line:n};
+  m=t.match(/^([A-Za-z_]\w*)$/);
+  if(m) return {type:'name',name:m[1],line:n};
+  throw new PyError('SyntaxError','invalid syntax',n);
+}
+
+function parseProgram(src){
+  const raw=String(src).replace(/\r/g,'').split('\n');
+  const lines=[];
+  raw.forEach((t,i)=>{
+    t=t.replace(/\t/g,'    ');
+    const s=stripComment(t).replace(/\s+$/,'');
+    if(s.trim()==='') return;
+    const indent=s.match(/^ */)[0].length;
+    lines.push({n:i+1,indent,text:s.trim()});
+  });
+  let idx=0;
+  function block(level){
+    const body=[];
+    while(idx<lines.length){
+      const L=lines[idx];
+      if(L.indent<level) break;
+      if(L.indent>level){
+        const prev=lines[idx-1];
+        if(prev && prev.indent>L.indent) throw new PyError('IndentationError','unindent does not match any outer indentation level',L.n);
+        throw new PyError('IndentationError','unexpected indent',L.n);
+      }
+      idx++;
+      const st=parseStmt(L);
+      if(st.type==='for'){
+        const nx=lines[idx];
+        if(!nx || nx.indent<=level) throw new PyError('IndentationError',`expected an indented block after 'for' statement on line ${L.n}`, nx?nx.n:L.n+1);
+        st.body=block(nx.indent);
+      }
+      body.push(st);
+    }
+    return body;
+  }
+  const prog=block(0);
+  if(idx<lines.length){
+    const L=lines[idx];
+    throw new PyError('IndentationError','unindent does not match any outer indentation level',L.n);
+  }
+  return prog;
+}
+
+function execute(prog,maxMoves){
+  maxMoves=maxMoves||2000;
+  const env=new Map(); // name -> 'robot' | 'int' | 'module'
+  const vals=new Map(); // valeurs des variables de boucle
+  function evalArg(expr,line){
+    const e=expr.replace(/[A-Za-z_]\w*/g,nm=>{
+      if(!env.has(nm)) throw new PyError('NameError',`name '${nm}' is not defined`,line);
+      if(env.get(nm)!=='int') throw new PyError('TypeError',`'${env.get(nm)==='robot'?'function':'module'}' object cannot be interpreted as an integer`,line);
+      return '('+vals.get(nm)+')';
+    });
+    let v; try{ v=Function('return ('+e+')')(); }catch(err){ throw new PyError('SyntaxError','invalid syntax',line); }
+    if(!Number.isInteger(v)) throw new PyError('SyntaxError','invalid syntax',line);
+    return v;
+  }
+  const moves=[];
+  function run(body){
+    for(const st of body){
+      if(st.type==='import'){
+        if(st.module!=='robot') throw new PyError('ModuleNotFoundError',`No module named '${st.module}'`,st.line);
+        const names=st.names[0]==='*'?ROBOT_FUNCS:st.names;
+        for(const nm of names){
+          if(!ROBOT_FUNCS.includes(nm)) throw new PyError('ImportError',`cannot import name '${nm}' from 'robot'`,st.line);
+          env.set(nm,'robot');
+        }
+      } else if(st.type==='importmod'){
+        if(st.module!=='robot') throw new PyError('ModuleNotFoundError',`No module named '${st.module}'`,st.line);
+        env.set(st.module,'module');
+      } else if(st.type==='for'){
+        const a=st.args.map(x=>evalArg(x,st.line));
+        let start=0,stop,step=1;
+        if(a.length===1) stop=a[0]; else {start=a[0];stop=a[1];if(a.length===3)step=a[2];}
+        if(step===0) throw new PyError('ValueError','range() arg 3 must not be zero',st.line);
+        for(let i=start;step>0?i<stop:i>stop;i+=step){ env.set(st.var,'int'); vals.set(st.var,i); run(st.body); }
+      } else if(st.type==='call'){
+        if(st.name==='print') continue;
+        if(!env.has(st.name)) throw new PyError('NameError',`name '${st.name}' is not defined`,st.line);
+        const kind=env.get(st.name);
+        if(kind==='int') throw new PyError('TypeError',"'int' object is not callable",st.line);
+        if(kind==='module') throw new PyError('TypeError',"'module' object is not callable",st.line);
+        if(st.args!==''){
+          const k=st.args.split(',').length;
+          throw new PyError('TypeError',`${st.name}() takes 0 positional arguments but ${k} ${k>1?'were':'was'} given`,st.line);
+        }
+        moves.push(st.name==='avancer'?'A':st.name==='droite'?'D':'G');
+        if(moves.length>maxMoves) throw new PyError('Limite','le robot fait beaucoup trop de mouvements',st.line);
+      } else if(st.type==='name'){
+        if(st.name==='print'||st.name==='range') continue;
+        if(!env.has(st.name)) throw new PyError('NameError',`name '${st.name}' is not defined`,st.line);
+      }
+    }
+  }
+  try{ run(prog); return {moves,error:null}; }
+  catch(e){ if(e instanceof PyError) return {moves,error:e}; throw e; }
+}
+
+function runCode(src){
+  let prog;
+  try{ prog=parseProgram(src); }
+  catch(e){ if(e instanceof PyError) return {moves:[],error:e,phase:'parse'}; throw e; }
+  const r=execute(prog);
+  r.phase='run';
+  return r;
+}
+
+/* ================= TRACÉ DU ROBOT ================= */
+const DIRS=[[0,1],[1,0],[0,-1],[-1,0]]; // haut, droite, bas, gauche (y vers le haut)
+function ekey(a,b,c,d){return (a<c||(a===c&&b<d))?`${a},${b},${c},${d}`:`${c},${d},${a},${b}`}
+function trace(moves,start){
+  let x=start?start[0]:0,y=start?start[1]:0,d=0;
+  const edges=new Set(),segs=[],pts=[[x,y]];
+  for(const m of moves){
+    if(m==='A'){
+      const nx=x+DIRS[d][0],ny=y+DIRS[d][1];
+      edges.add(ekey(x,y,nx,ny)); segs.push([x,y,nx,ny]);
+      x=nx;y=ny; pts.push([x,y]);
+    } else if(m==='D') d=(d+1)%4; else d=(d+3)%4;
+  }
+  return {edges,segs,end:[x,y],dir:d,pts};
+}
+function edgesFromPath(path){
+  const s=new Set();
+  for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];s.add(ekey(a[0],a[1],b[0],b[1]))}
+  return s;
+}
+function segsFromEdges(edges){return [...edges].map(k=>k.split(',').map(Number))}
+function bbox(points){
+  let x0=0,x1=0,y0=0,y1=0;
+  points.forEach(p=>{x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1])});
+  return {x0,x1,y0,y1,w:x1-x0,h:y1-y0};
+}
+function sameSet(a,b){if(a.size!==b.size)return false;for(const k of a)if(!b.has(k))return false;return true}
+// place le départ pour que le trajet (relatif à 0,0) tienne dans la grille N×N, avec marge si possible
+function placeStart(points,N,r){
+  const b=bbox(points);
+  let lo=-b.x0+1,hi=N-b.x1-1; if(lo>hi){lo=-b.x0;hi=N-b.x1}
+  let lo2=-b.y0+1,hi2=N-b.y1-1; if(lo2>hi2){lo2=-b.y0;hi2=N-b.y1}
+  return [ri(lo,hi,r),ri(lo2,hi2,r)];
+}
+
+/* ================= BANQUES D'EXERCICES ================= */
+const HEAD='from robot import *';
+const P=(...l)=>[HEAD,...l].join('\n');
+const A='avancer()',D='droite()',G='gauche()',I='    ',II='        ';
+const F=n=>`for loop in range(${n}):`;
+
+const POOL_DRAW={
+  Sa:[ P(A,A,D,A,D,A), P(A,D,A,A,G,A), P(A,A,A,G,A,G,A), P(D,A,A,G,A,D,A) ],
+  Sb:[ P(D,A,G,A,A,A), P(G,A,A,D,A,D,A), P(A,G,A,A,D,A,D,A), P(D,A,A,A,G,A,G,A) ],
+  Sc:[ P(A,A,D,A,A,D,A,A,D,A,A),
+       P(A,A,A,D,A,A,A,D,A,A,D,A),
+       P(D,A,A,G,A,A,G,A,G,A,D,A),
+       P(A,D,A,A,G,A,A,G,A,A,A,G,A) ],
+  La:[ P(F(4),I+A,D,F(4),I+A),
+       P(F(3),I+A,D,F(5),I+A),
+       P(F(5),I+A,G,F(3),I+A),
+       P(F(2),I+A,D,F(6),I+A) ],
+  Lb:[ P(F(4),I+A,I+A,I+D),
+       P(F(4),I+A,I+A,I+A,I+G),
+       P(F(2),I+A,I+A,I+A,I+D,I+A,I+D),
+       P(F(4),I+A,I+D,I+A,I+G) ],
+  Lc:[ P(F(4),I+A,I+D,I+A,I+D),
+       P(F(3),I+A,I+G,I+A,I+D,A),
+       P(F(2),I+A,I+A,I+D,I+A,I+D,G,A),
+       P(F(4),I+D,I+A,I+G,I+A,D,A) ],
+  N:[ P(F(3),I+A,I+F(3),II+D,II+A,I+G),
+      P(F(2),I+A,I+F(3),II+G,II+A,I+D),
+      P(F(3),I+F(2),II+A,II+D,I+G),
+      P(F(2),I+F(2),II+A,II+D,I+A,I+G) ]
+};
+
+const POOL_RETOUR=[
+  P(A,A,D,A),
+  P(A,A,A,G,A,A),
+  P(D,A,A,A,G,A),
+  P(A,D,A,A,G,A,A)
+];
+
+// [[réponse]] = case à compléter
+const POOL_TROUS=[
+  P(`for loop in range([[4]]):`, I+`[[avancer()]]`, I+A, I+A, I+`[[droite()]]`),
+  P(`for loop in range([[4]]):`, I+A, I+`[[droite()]]`, I+`[[avancer()]]`, I+G),
+  P(F(2), I+`for loop in range([[4]]):`, II+A, I+`[[droite()]]`, I+`for loop in range([[2]]):`, II+A, I+D),
+  P(`for loop in range([[4]]):`, I+`for loop in range([[3]]):`, II+`[[avancer()]]`, I+G)
+];
+
+const POOL_DEBUG=[
+  { bug: P(`for loop in range(4)`, I+A, '  '+A, I+D),
+    fix: P(F(4), I+A, I+A, I+D) },
+  { bug: P(F(3), A, I+'Droite()', I+A, I+G),
+    fix: P(F(3), I+A, I+D, I+A, I+G) },
+  { bug: P('for loop in range 2:', I+A, I+A, I+A, I+'droite', I+A, I+D),
+    fix: P(F(2), I+A, I+A, I+A, I+D, I+A, I+D) },
+  { bug: [F(4), I+A, I+A, '     gauche()'].join('\n'),
+    fix: P(F(4), I+A, I+A, I+G) }
+];
+
+const POOL_FIGURE=[
+  { name:'escalier', code:P(F(4), I+A, I+D, I+A, I+G) },
+  { name:'créneaux', code:P(F(3), I+A, I+D, I+A, I+D, I+A, I+G, I+A, I+G) },
+  { name:'grand escalier', code:P(F(3), I+A, I+A, I+D, I+A, I+A, I+G) },
+  { name:'grands créneaux', code:P(F(3), I+A, I+A, I+D, I+A, I+D, I+A, I+A, I+G, I+A, I+G) }
+];
+
+// Défis bonus : échelle de difficulté croissante (une variante tirée par niveau, + miroir)
+// max = objectif de lignes (import compris, lignes vides et commentaires exclus) ; hint = astuce range(i)
+const III='            ';
+const POOL_DEFIS=[
+  [ { name:'la pyramide', max:12, code:P(F(3), I+A, I+D, I+A, I+G, D, F(3), I+D, I+A, I+G, I+A) },
+    { name:'la croix', max:10, code:P(F(4), I+A, I+A, I+D, I+A, I+D, I+A, I+A, I+G) } ],
+  [ { name:'la fenêtre', max:7, code:P(F(4), I+F(4), II+A, II+A, II+D, I+D) },
+    { name:'le moulin', max:7, code:P(F(4), I+F(3), II+A, II+D, I+A, I+A) } ],
+  [ { name:'les carrés en diagonale', max:9, code:P(F(3), I+F(4), II+A, II+D, I+A, I+D, I+A, I+G) },
+    { name:'la frise de carrés', max:10, code:P(F(4), I+F(4), II+A, II+A, II+D, I+D, I+A, I+A, I+G) } ],
+  [ { name:'la spirale', max:5, hint:true, code:P('for i in range(1, 8):', I+'for j in range(i):', II+A, I+D) } ],
+  [ { name:'l\u2019escalier qui grandit', max:8, hint:true, code:P('for i in range(1, 4):', I+'for j in range(i):', II+A, I+D, I+'for j in range(i):', II+A, I+G) } ],
+  [ { name:'les carrés emboîtés', max:6, hint:true, code:P('for i in range(1, 6):', I+'for k in range(4):', II+'for j in range(i):', III+A, II+D) } ]
+];
+
+const POOL_RECT=[[9,6],[8,5],[7,4],[6,9],[5,8],[4,7]]; // [largeur, hauteur]
+
+// Vocabulaire : commandes Python turtle (anglais) ↔ ce qu'elles font (français)
+const VOCAB=[
+  ['forward(100)','avancer de 100 pas'],
+  ['backward(50)','reculer de 50 pas'],
+  ['left(90)','tourner à gauche de 90°'],
+  ['right(90)','tourner à droite de 90°'],
+  ['penup()','lever le crayon'],
+  ['pendown()','baisser le crayon'],
+  ['pensize(5)','choisir l\u2019épaisseur du trait'],
+  ['color("red")','dessiner en rouge'],
+  ['fillcolor("blue")','choisir la couleur de remplissage'],
+  ['begin_fill()','commencer le remplissage'],
+  ['end_fill()','terminer le remplissage'],
+  ['circle(50)','tracer un cercle de rayon 50'],
+  ['goto(0, 0)','aller au point de coordonnées (0, 0)'],
+  ['setheading(90)','s\u2019orienter vers le haut'],
+  ['speed(0)','dessiner le plus vite possible'],
+  ['hideturtle()','cacher la tortue'],
+  ['showturtle()','montrer la tortue'],
+  ['shape("turtle")','donner la forme d\u2019une tortue'],
+  ['bgcolor("yellow")','colorier le fond en jaune'],
+  ['dot(20)','dessiner un point de diamètre 20'],
+  ['write("Hello")','écrire un texte à l\u2019écran'],
+  ['clear()','effacer le dessin'],
+  ['done()','garder la fenêtre ouverte à la fin'],
+  ['from turtle import *','importer les commandes de la tortue'],
+  ['for i in range(4):','répéter 4 fois']
+];
+// paires faciles à confondre : servent de distracteurs prioritaires dans les QCM
+const PARTNERS=[[0,1],[2,3],[4,5],[9,10],[15,16],[7,8],[7,18],[12,13],[6,19]];
+
+/* ================= CONSTRUCTION D'UN SUJET ================= */
+// variante « miroir » : droite <-> gauche (même difficulté, figure symétrique)
+function mirror(code){return code.replace(/\b(droite|gauche|Droite|Gauche)\b/g,w=>({droite:'gauche',gauche:'droite',Droite:'Gauche',Gauche:'Droite'})[w])}
+function maybeMirror(code,r){return r()<0.5?mirror(code):code}
+function buildPlan(seed){
+  const r=mulberry32(seed);
+  const N=10;
+  // --- Vocabulaire
+  const vIdx=shuffle(VOCAB.map((_,i)=>i),r);
+  const pairIdx=vIdx.slice(0,6), qIdx=vIdx.slice(6,12);
+  const match={id:'v-match',kind:'match',pts:1.5,left:shuffle(pairIdx,r),right:shuffle(pairIdx,r)};
+  const qcms=qIdx.map((vi,k)=>{
+    const dir=k%2===0?'en2fr':'fr2en';
+    const partners=PARTNERS.filter(p=>p.includes(vi)).map(p=>p[0]===vi?p[1]:p[0]);
+    const rest=shuffle(VOCAB.map((_,i)=>i).filter(i=>i!==vi&&!partners.includes(i)),r);
+    const others=[...shuffle(partners,r).slice(0,2),...rest].slice(0,3);
+    return {id:'v-q'+k,kind:'qcm',pts:0.25,vi,dir,options:shuffle([vi,...others],r)};
+  });
+  const vocabEx=[match,...shuffle(qcms,r)];
+  // --- Suivre le code
+  const drawEx=shuffle(Object.keys(POOL_DRAW),r).map(slot=>{
+    const code=maybeMirror(pick(POOL_DRAW[slot],r),r);
+    const t=trace(runCode(code).moves,[0,0]);
+    const start=placeStart(t.pts,N,r);
+    return {id:'d-'+slot,kind:'draw',pts:1,code,N,start,expected:[...trace(runCode(code).moves,start).edges]};
+  });
+  // --- Compléter / déboguer
+  const retCode=maybeMirror(pick(POOL_RETOUR,r),r);
+  const rt=trace(runCode(retCode).moves,[0,0]);
+  const retour={id:'c-retour',kind:'retour',pts:1.5,prefix:retCode,N,start:placeStart(rt.pts,N,r)};
+  const trousTpl=maybeMirror(pick(POOL_TROUS,r),r);
+  const trousSol=trousTpl.replace(/\[\[(.*?)\]\]/g,'$1');
+  const tt=trace(runCode(trousSol).moves,[0,0]);
+  const tStart=placeStart(tt.pts,N,r);
+  const trous={id:'c-trous',kind:'trous',pts:1.5,tpl:trousTpl,answers:[...trousTpl.matchAll(/\[\[(.*?)\]\]/g)].map(m=>m[1]),N,start:tStart,expected:[...trace(runCode(trousSol).moves,tStart).edges]};
+  const dbg0=pick(POOL_DEBUG,r), mir=r()<0.5, dbg=mir?{bug:mirror(dbg0.bug),fix:mirror(dbg0.fix)}:dbg0;
+  const dt=trace(runCode(dbg.fix).moves,[0,0]);
+  const dStart=placeStart(dt.pts,N,r);
+  const debug={id:'c-debug',kind:'debug',pts:1,bug:dbg.bug,fix:dbg.fix,N,start:dStart,expected:[...trace(runCode(dbg.fix).moves,dStart).edges]};
+  const completeEx=shuffle([retour,trous,debug],r);
+  // --- Écrire
+  const fig0=pick(POOL_FIGURE,r), fig={...fig0,code:maybeMirror(fig0.code,r)};
+  const ft=trace(runCode(fig.code).moves,[0,0]);
+  const fStart=placeStart(ft.pts,N,r);
+  const figure={id:'w-figure',kind:'figure',pts:3,model:fig.code,N,start:fStart,expected:[...trace(runCode(fig.code).moves,fStart).edges]};
+  const [W,H]=pick(POOL_RECT,r);
+  const rect={id:'w-rect',kind:'rect',pts:3,W,H,N:11,start:[1,1]};
+  const writeEx=shuffle([figure,rect],r);
+  const defis=POOL_DEFIS.map((pool,lv)=>{
+    const d0=pick(pool,r), dcode=maybeMirror(d0.code,r);
+    const dft=trace(runCode(dcode).moves,[0,0]);
+    const st=placeStart(dft.pts,N,r);
+    return {id:'x-defi-'+lv,kind:'defi',level:lv+1,pts:0,bonus:true,name:d0.name,max:d0.max,hint:!!d0.hint,model:dcode,N,start:st,expected:[...trace(runCode(dcode).moves,st).edges]};
+  });
+  defis.push({id:'x-libre',kind:'libre',level:POOL_DEFIS.length+1,pts:0,bonus:true,name:'création libre',N:12,start:[6,6]});
+
+  const parts={
+    vocab:{key:'vocab',title:'Turtle English',sub:'Les commandes turtle en français',icon:'🇬🇧',ex:vocabEx},
+    draw:{key:'draw',title:'Suis le code',sub:'Lis le programme et dessine le trajet',icon:'✏️',ex:drawEx},
+    complete:{key:'complete',title:'Complète et corrige',sub:'Code à compléter, chasse aux bugs',icon:'🧩',ex:completeEx},
+    write:{key:'write',title:'Écris ton code',sub:'Programme entièrement écrit par toi',icon:'⌨️',ex:writeEx}
+  };
+  const order=shuffle(['vocab','draw','complete','write'],r);
+  return {seed,parts:order.map(k=>parts[k]),defi:{key:'defi',title:'Défis bonus',sub:'Pour celles et ceux qui ont fini',icon:'⭐',ex:defis,bonus:true}};
+}
+
+/* ================= NOTATION ================= */
+const q4=x=>Math.round(x*4)/4;
+function countLines(code){return String(code).split('\n').filter(l=>stripComment(l).trim()!=='').length}
+function usesFor(code){return /^\s*for\s/m.test(stripAllComments(code))}
+function stripAllComments(code){return String(code).split('\n').map(stripComment).join('\n')}
+function rectEdges(sx,sy,dx,dy){ // rectangle du point (sx,sy) au coin opposé (sx+dx, sy+dy)
+  const e=new Set(),x2=sx+dx,y2=sy+dy,stx=Math.sign(dx),sty=Math.sign(dy);
+  for(let x=sx;x!==x2;x+=stx){e.add(ekey(x,sy,x+stx,sy));e.add(ekey(x,y2,x+stx,y2))}
+  for(let y=sy;y!==y2;y+=sty){e.add(ekey(sx,y,sx,y+sty));e.add(ekey(x2,y,x2,y+sty))}
+  return e;
+}
+function rectMatch(edges,start,W,H){
+  for(const sx of [1,-1])for(const sy of [1,-1]) if(sameSet(edges,rectEdges(start[0],start[1],sx*W,sy*H))) return true;
+  return false;
+}
+function overlapScore(expected,got){
+  let c=0,x=0; got.forEach(k=>expected.has(k)?c++:x++);
+  return {c,x,exact:c===expected.size&&x===0,ratio:Math.max(0,(c-x)/expected.size)};
+}
+
+// ans = réponses de l'élève (objet)
+function gradeEx(ex,ans){
+  const a=ans[ex.id];
+  const R={got:0,max:ex.pts,msg:''};
+  if(ex.kind==='match'){
+    const pairs=(a&&a.pairs)||{}; let ok=0;
+    ex.left.forEach(li=>{ if(pairs[li]===li) ok++; });
+    R.got=q4(ok*0.25); R.msg=`${ok} association(s) correcte(s) sur 6`; R.ok=ok;
+  } else if(ex.kind==='qcm'){
+    const ch=a&&a.choice; R.got=(ch===ex.vi)?ex.pts:0; R.msg=ch===undefined||ch===null?'sans réponse':(ch===ex.vi?'juste':'faux');
+  } else if(ex.kind==='draw'){
+    const exp=new Set(ex.expected), got=edgesFromPath((a&&a.path)||[ex.start]);
+    if(got.size===0){R.msg='aucun tracé';return R;}
+    const o=overlapScore(exp,got);
+    R.got=o.exact?ex.pts:q4(Math.min(ex.pts*0.75,ex.pts*o.ratio));
+    R.msg=o.exact?'trajet exact':`${o.c} segment(s) justes sur ${exp.size}, ${o.x} en trop`;
+  } else if(ex.kind==='retour'){
+    const code=(a&&a.code!=null)?a.code:ex.prefix;
+    const pre=runCode(ex.prefix).moves, res=runCode(code);
+    if(res.error){R.msg=`erreur : ${res.error.type} (ligne ${res.error.line})`;return R;}
+    const keeps=pre.every((m,i)=>res.moves[i]===m);
+    if(!keeps){R.msg='le début du programme a été modifié';return R;}
+    const t=trace(res.moves,ex.start), pt=trace(pre,ex.start);
+    const back=t.end[0]===ex.start[0]&&t.end[1]===ex.start[1];
+    if(!back){R.msg='le robot ne revient pas au départ';return R;}
+    const added=res.moves.slice(pre.length).filter(m=>m==='A').length;
+    const dist=Math.abs(pt.end[0]-ex.start[0])+Math.abs(pt.end[1]-ex.start[1]);
+    R.got=1+(added===dist?0.5:0);
+    R.msg=added===dist?'retour au départ par le chemin le plus court':`retour au départ, mais ${added} pas au lieu de ${dist}`;
+  } else if(ex.kind==='trous'){
+    const vals=(a&&a.blanks)||[];
+    let k=0; const code=ex.tpl.replace(/\[\[(.*?)\]\]/g,()=>vals[k++]||'');
+    const res=runCode(code);
+    const exp=new Set(ex.expected);
+    if(!res.error&&sameSet(exp,trace(res.moves,ex.start).edges)){R.got=ex.pts;R.msg='figure obtenue';return R;}
+    const norm=s=>String(s||'').replace(/\s+/g,'');
+    const ok=ex.answers.filter((x,i)=>norm(vals[i])===norm(x)).length;
+    R.got=q4(ex.pts*0.6*ok/ex.answers.length);
+    R.msg=`figure non obtenue, ${ok} case(s) juste(s) sur ${ex.answers.length}`+(res.error?` (${res.error.type})`:'');
+  } else if(ex.kind==='debug'){
+    const code=(a&&a.code!=null)?a.code:ex.bug, res=runCode(code);
+    if(res.error){R.msg=`erreur restante : ${res.error.type} (ligne ${res.error.line})`;return R;}
+    if(sameSet(new Set(ex.expected),trace(res.moves,ex.start).edges)){R.got=1;R.msg='programme corrigé';}
+    else {R.got=0.5;R.msg='plus d’erreur, mais la figure n’est pas la bonne';}
+  } else if(ex.kind==='figure'){
+    const code=(a&&a.code)||'', res=runCode(code);
+    if(!code.trim()||!res.moves.length&&!res.error){R.msg='pas de tracé';return R;}
+    if(res.error){R.msg=`erreur : ${res.error.type} (ligne ${res.error.line})`;return R;}
+    const o=overlapScore(new Set(ex.expected),trace(res.moves,ex.start).edges);
+    if(o.exact){R.got=2.5+(usesFor(code)?0.5:0);R.msg='figure exacte'+(usesFor(code)?' avec boucle':' (sans boucle)');}
+    else {R.got=q4(1.5*o.ratio);R.msg=`figure incomplète : ${o.c} segment(s) justes, ${o.x} en trop`;}
+  } else if(ex.kind==='defi'){
+    const code=(a&&a.code)||'', res=runCode(code);
+    R.max=0;
+    if(!code.trim()||(!res.moves.length&&!res.error)){R.msg='non tenté';return R;}
+    if(res.error){R.msg=`erreur : ${res.error.type} (ligne ${res.error.line})`;return R;}
+    const o=overlapScore(new Set(ex.expected),trace(res.moves,ex.start).edges), nl=countLines(code);
+    R.solved=o.exact; R.star=o.exact&&nl<=ex.max;
+    R.msg=o.exact?`réussi en ${nl} lignes`+(nl<=ex.max?' ⭐':` (objectif : ${ex.max})`):'non réussi';
+  } else if(ex.kind==='libre'){
+    R.max=0; const code=(a&&a.code)||''; const res=runCode(code);
+    R.msg=res.moves.length&&!res.error?`dessin libre : ${trace(res.moves,ex.start).edges.size} segments`:'non tenté';
+  } else if(ex.kind==='rect'){
+    const code=(a&&a.code)||'', res=runCode(code);
+    if(!code.trim()){R.msg='pas de programme';return R;}
+    if(res.error){R.msg=`erreur : ${res.error.type} (ligne ${res.error.line})`;return R;}
+    const e=trace(res.moves,ex.start).edges, loop=usesFor(code);
+    if(rectMatch(e,ex.start,ex.W,ex.H)){R.got=2+(loop?1:0);R.msg='rectangle exact'+(loop?' avec boucle':' (sans boucle)');}
+    else if(rectMatch(e,ex.start,ex.H,ex.W)){R.got=1.5+(loop?0.5:0);R.msg='rectangle aux dimensions inversées';}
+    else if(e.size){R.got=0.5;R.msg='tracé obtenu, mais pas le bon rectangle';}
+    else R.msg='pas de tracé';
+  }
+  return R;
+}
+function gradeAll(plan,ans){
+  const parts=plan.parts.map(p=>{
+    const rows=p.ex.map(ex=>({ex,...gradeEx(ex,ans)}));
+    return {p,rows,got:rows.reduce((s,r)=>s+r.got,0),max:rows.reduce((s,r)=>s+r.max,0)};
+  });
+  const base=parts.reduce((s,p)=>s+p.got,0);
+  const defis=plan.defi?plan.defi.ex.map(ex=>({ex,...gradeEx(ex,ans)})):[];
+  return {parts,base,defis,solved:defis.filter(d=>d.solved).length,total:base,max:parts.reduce((s,p)=>s+p.max,0)};
+}
+
+if(typeof module!=='undefined') module.exports={CONFIG,runCode,trace,buildPlan,gradeEx,gradeAll,POOL_DRAW,POOL_RETOUR,POOL_TROUS,POOL_DEBUG,POOL_FIGURE,POOL_RECT,POOL_DEFIS,VOCAB,mirror,countLines,edgesFromPath,parseProgram};
+
+</script>
+<script>
+/* ================= ÉTAT ================= */
+const KEY='ds-snt-robot-v1';
+let S=null, PLAN=null, timerId=null, saveT=null;
+function load(){try{const s=localStorage.getItem(KEY);return s?JSON.parse(s):null}catch(e){return null}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function saveSoon(){clearTimeout(saveT);saveT=setTimeout(save,250)}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmt=x=>(Math.round(x*100)/100).toString().replace('.',',');
+function ans(id){return S.ans[id]||(S.ans[id]={})}
+
+/* ================= ROBOT (illustration) ================= */
+function botSVG(size){
+  return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" aria-hidden="true">
+  <line x1="60" y1="22" x2="60" y2="8" stroke="#1c2233" stroke-width="4"/><circle cx="60" cy="8" r="6" fill="#ec6a55" stroke="#1c2233" stroke-width="3"/>
+  <rect x="22" y="22" width="76" height="56" rx="16" fill="#fffdf8" stroke="#1c2233" stroke-width="4"/>
+  <rect x="32" y="34" width="56" height="30" rx="10" fill="#1c2233"/>
+  <circle cx="47" cy="49" r="6" fill="#7fe0bf"/><circle cx="73" cy="49" r="6" fill="#7fe0bf"/>
+  <rect x="34" y="82" width="52" height="24" rx="8" fill="#f2b33d" stroke="#1c2233" stroke-width="4"/>
+  <circle cx="40" cy="110" r="7" fill="#1c2233"/><circle cx="80" cy="110" r="7" fill="#1c2233"/>
+  <rect x="10" y="40" width="12" height="22" rx="5" fill="#ec6a55" stroke="#1c2233" stroke-width="3"/><rect x="98" y="40" width="12" height="22" rx="5" fill="#ec6a55" stroke="#1c2233" stroke-width="3"/>
+  </svg>`;
+}
+
+/* ================= COLORATION PYTHON ================= */
+function hlTokens(s){
+  const ci=stripComment(s).length;
+  const code=s.slice(0,ci), com=s.slice(ci);
+  let h=esc(code)
+    .replace(/\b(from|import|for|in)\b/g,'<span class="kw">$1</span>')
+    .replace(/\b(range|print)\b/g,'<span class="bi">$1</span>')
+    .replace(/\b(avancer|droite|gauche)\b/g,'<span class="fn">$1</span>')
+    .replace(/\b(\d+)\b/g,'<span class="nu">$1</span>');
+  if(com) h+='<span class="cm">'+esc(com)+'</span>';
+  return h;
+}
+function hlLine(line){
+  const lead=line.match(/^ */)[0], rest=line.slice(lead.length);
+  let g='',i=0; while(i+4<=lead.length){g+='<span class="ig">    </span>';i+=4} g+=lead.slice(i);
+  return g+hlTokens(rest);
+}
+function codeBox(code){
+  return `<div class="codebox">${code.split('\n').map(l=>`<span class="ln">${hlLine(l)||' '}</span>`).join('')}</div>`;
+}
+
+/* ================= GRILLE SVG ================= */
+const CELL=34,PAD=16;
+const gx=(N,x)=>PAD+x*CELL, gy=(N,y)=>PAD+(N-y)*CELL;
+function segPath(N,segs){return segs.map(([a,b,c,d])=>`M${gx(N,a)} ${gy(N,b)}L${gx(N,c)} ${gy(N,d)}`).join('')}
+function robotMark(N,start,label=true){
+  const x=gx(N,start[0]),y=gy(N,start[1]);
+  return `<g class="robot-start"><circle cx="${x}" cy="${y}" r="9" fill="#4b55d6" stroke="#1c2233" stroke-width="2"/>
+  <path d="M${x} ${y-21}l-6 9h12z" fill="#1c2233"/>${label?`<text x="${x+12}" y="${y-8}" font-size="12" font-weight="700" fill="#4b55d6" font-family="Atkinson Hyperlegible,sans-serif">Robot</text>`:''}</g>`;
+}
+function gridBase(N){
+  const s=N*CELL+2*PAD; let g='';
+  for(let i=0;i<=N;i++){g+=`<line class="gl" x1="${gx(N,i)}" y1="${PAD}" x2="${gx(N,i)}" y2="${s-PAD}"/><line class="gl" x1="${PAD}" y1="${gy(N,i)}" x2="${s-PAD}" y2="${gy(N,i)}"/>`}
+  return {s,g};
+}
+function staticGrid(N,start,layers,w){
+  const {s,g}=gridBase(N);
+  const L=layers.map(l=>`<path class="${l.cls}" d="${segPath(N,l.segs)}"/>`).join('');
+  return `<svg class="gridsvg" viewBox="0 0 ${s} ${s}" width="${w||s}" >${g}${L}${robotMark(N,start,false)}</svg>`;
+}
+
+/* ================= ÉCRAN D'ACCUEIL ================= */
+function showScreen(id){['s-home','s-tour','s-ds','s-wait','s-res'].forEach(x=>$('#'+x).classList.toggle('hidden',x!==id));window.scrollTo(0,0)}
+function initHome(){
+  $('#home-bot').innerHTML=botSVG(92);
+  showScreen('s-home');
+  $('#b-start').onclick=()=>{
+    const nom=$('#i-nom').value.trim(),prenom=$('#i-prenom').value.trim(),classe=$('#i-classe').value.trim();
+    if(!nom||!prenom||!classe){$('#home-err').textContent='Écris ton nom, ton prénom et ta classe.';return}
+    const seed=(Date.now()^Math.floor(Math.random()*1e9))>>>0;
+    S={student:{nom,prenom,classe},seed,start:null,ans:{},tests:{},blurs:0,finished:false,ui:{part:0}};
+    save(); showTour();
+  };
+}
+
+/* ================= PRÉSENTATION DE L'INTERFACE ================= */
+function showTour(){
+  PLAN=buildPlan(S.seed);
+  let k=0;
+  const demo={id:'demo-draw',kind:'draw',N:4,start:[1,1],code:'from robot import *\navancer()\ndroite()\navancer()\navancer()'};
+  const slides=[
+    ()=>`<div class="slide"><div><h3>🧭 Quatre parties</h3>
+      <p>Le DS est découpé en <b>4 parties</b>, présentées sous forme d'onglets en haut de l'écran. Tu les fais <b>dans l'ordre que tu veux</b>.</p>
+      <p>La barre verte de chaque onglet se remplit quand tu réponds. Sur chaque exercice, une pastille devient verte <span class="done-dot on" style="display:inline-block;vertical-align:middle"></span> quand il est rempli.</p>
+      <p>Ton sujet est <b>différent de celui de tes voisins</b> : inutile de regarder ailleurs !</p></div>
+      <div class="mock-tabs">${PLAN.parts.map((p,i)=>`<div class="tab ${i===0?'on':''}"><span class="num">Partie ${i+1}</span><div class="t1"><span>${p.icon}</span>${p.title}</div><div class="t2">${p.sub}</div><div class="bar"><i style="width:${[60,25,0,0][i]}%"></i></div></div>`).join('')}</div></div>`,
+    ()=>`<div class="slide"><div><h3>✏️ Dessiner un trajet</h3>
+      <p>Dans la partie « Suis le code », tu lis un programme et tu dessines le trajet du robot sur la grille.</p>
+      <p>Le crayon 🔴 part du robot. <b>Clique sur un point aligné</b> avec le crayon (même ligne ou même colonne) : le trait se dessine.</p>
+      <p><b>↶ Annuler</b> retire le dernier trait, <b>🗑 Effacer</b> recommence tout.</p>
+      <div class="try">👉 Essaie : dessine le trajet du petit programme ci-contre.</div><div class="ok-msg" id="demo-ok"></div></div>
+      <div id="demo-grid"></div></div>`,
+    ()=>`<div class="slide"><div><h3>⌨️ Écrire du code</h3>
+      <p>L'éditeur gère l'<b>indentation</b> pour toi :</p>
+      <p><span class="kbd">Tab</span> décale la ligne de <b>4 espaces</b>.<br><span class="kbd">Maj</span> + <span class="kbd">Tab</span> enlève 4 espaces.<br><span class="kbd">Entrée</span> après une ligne qui finit par <b>:</b> décale automatiquement la ligne suivante.<br><span class="kbd">⌫</span> au début d'une ligne revient d'un niveau.</p>
+      <p>Les petits traits verticaux montrent les <b>niveaux d'indentation</b>.</p>
+      <div class="try">👉 Essaie : à la fin, tape <code>for i in range(4):</code> puis <span class="kbd">Entrée</span>, puis <code>avancer()</code>.</div></div>
+      <div id="demo-ed"></div></div>`,
+    ()=>`<div class="slide"><div><h3>▶ Tester son programme</h3>
+      <p>Pour les exercices de code, le bouton <b>▶ Tester</b> fait bouger le robot sur la grille. Mais attention : <b>${CONFIG.ESSAIS} essais seulement</b> par exercice. Réfléchis avant de tester !</p>
+      <p>La <b style="color:var(--mint)">figure verte</b> est celle qu'on attend, le <b style="color:var(--robot)">trait bleu</b> est le trajet de ton robot.</p>
+      <p>En cas d'erreur, la console affiche le message de Python, en anglais, avec le <b>numéro de la ligne</b>.</p></div>
+      <div><div class="console"><span class="dim">Traceback (most recent call last):
+  File "main.py", line 3</span>
+    avancer()
+<span class="err">IndentationError: expected an indented block after 'for' statement on line 2</span></div>
+      <div class="console"><span class="ok">✔ Programme exécuté : 8 déplacements du robot.</span></div></div></div>`,
+    ()=>`<div class="slide"><div><h3>🏁 Terminer</h3>
+      <p>Le <b>chrono de ${CONFIG.DUREE_MIN} minutes</b> démarre quand tu cliques sur « C'est parti ». Il devient orange puis rouge à la fin. À zéro, le DS s'arrête tout seul.</p>
+      <p>Tes réponses sont enregistrées en continu. Quand tu as fini, clique sur <b>🏁 Terminé</b> : tu ne pourras plus rien modifier.</p>
+      <p>⭐ Tu as répondu à tout et il te reste du temps ? Des <b>défis bonus</b> se débloquent, de plus en plus difficiles. Jusqu'où iras-tu ?</p></div>
+      <div style="text-align:center">${botSVG(170)}<p style="font-family:var(--f-display);font-size:22px;font-weight:700;margin-top:10px">Bon courage ${esc(S.student.prenom)} !</p></div></div>`
+  ];
+  $('#tour-hello').textContent='Avant de commencer : comment ça marche ?';
+  function draw(){
+    $('#tour-steps').innerHTML=slides.map((_,i)=>`<i class="${i<=k?'on':''}"></i>`).join('');
+    $('#tour-body').innerHTML=slides[k]();
+    $('#tour-prev').style.visibility=k?'visible':'hidden';
+    const last=k===slides.length-1;
+    $('#tour-next').textContent=last?'⏱ C\u2019est parti !':'Suivant →';
+    $('#tour-next').className='btn '+(last?'coral big':'primary');
+    if(k===1){
+      delete S.ans['demo-draw'];
+      mountDraw($('#demo-grid'),demo);
+      const exp=trace(runCode(demo.code).moves,demo.start).edges;
+      const chk=()=>{const a=S.ans['demo-draw'];$('#demo-ok')&&($('#demo-ok').textContent=a&&sameSet(exp,edgesFromPath(a.path))?'✔ Bravo, c\u2019est exactement ça !':'')};
+      $('#demo-grid').addEventListener('click',()=>setTimeout(chk,0));
+    }
+    if(k===2) mountEditor($('#demo-ed'),'from robot import *\n# ton essai :\n',()=>{});
+  }
+  $('#tour-prev').onclick=()=>{if(k>0){k--;draw()}};
+  $('#tour-next').onclick=()=>{
+    if(k<slides.length-1){k++;draw();return}
+    delete S.ans['demo-draw'];
+    S.start=Date.now(); save(); startDS();
+  };
+  showScreen('s-tour'); draw();
+}
+
+/* ================= DS ================= */
+function allParts(){return [...PLAN.parts,PLAN.defi]}
+function mainDone(){return PLAN.parts.every(p=>p.ex.every(isDone))}
+function startDS(){
+  PLAN=buildPlan(S.seed);
+  $('#who').textContent=`${S.student.prenom} ${S.student.nom} · ${S.student.classe} · sujet n° ${S.seed%10000}`;
+  showScreen('s-ds');
+  renderTabs(); renderPart();
+  $('#b-finish').onclick=askFinish;
+  tick(); clearInterval(timerId); timerId=setInterval(tick,1000);
+}
+function tick(){
+  const left=Math.max(0,S.start+CONFIG.DUREE_MIN*60000-Date.now());
+  const m=Math.floor(left/60000),s=Math.floor(left%60000/1000);
+  $('#timer-v').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const t=$('#timer'); t.classList.toggle('warn',left<15*60000&&left>=5*60000); t.classList.toggle('alert',left<5*60000);
+  if(left<=0){clearInterval(timerId);finish(true)}
+}
+document.addEventListener('visibilitychange',()=>{if(S&&!S.finished&&document.hidden){S.blurs=(S.blurs||0)+1;save()}});
+
+function isDone(ex){
+  const a=S.ans[ex.id]; if(!a) return false;
+  switch(ex.kind){
+    case 'match': return a.pairs&&Object.keys(a.pairs).length===6;
+    case 'qcm': return a.choice!=null;
+    case 'draw': return a.path&&a.path.length>1;
+    case 'trous': return a.blanks&&a.blanks.length===ex.answers.length&&a.blanks.every(v=>v&&v.trim());
+    case 'retour': return a.code!=null&&a.code.trim()!==ex.prefix.trim();
+    case 'debug': return a.code!=null&&a.code.trim()!==ex.bug.trim();
+    default: return a.code!=null&&runCode(a.code).moves.length>0;
+  }
+}
+function countItems(p){ // compte les items (vocab : chaque QCM + l'association)
+  return {done:p.ex.filter(isDone).length,tot:p.ex.length};
+}
+function renderTabs(){
+  const open=mainDone(), d=PLAN.defi;
+  $('#tabs').innerHTML=PLAN.parts.map((p,i)=>{
+    const c=countItems(p),pts=p.ex.reduce((s,e)=>s+e.pts,0);
+    return `<button class="tab ${i===S.ui.part?'on':''}" data-i="${i}">
+      <span class="num">Partie ${i+1} · ${fmt(pts)} pts</span>
+      <div class="t1"><span>${p.icon}</span>${p.title}</div>
+      <div class="t2">${p.sub}</div>
+      <div class="bar"><i style="width:${100*c.done/c.tot}%"></i></div></button>`;
+  }).join('')+`<button class="tab defi ${open?'':'locked'} ${S.ui.part===4?'on':''}" data-i="4">
+      <span class="num">Bonus</span>
+      <div class="t1"><span>${open?'⭐':'🔒'}</span>${d.title}</div>
+      <div class="t2">${open?'Débloqué : à toi de jouer !':'Réponds d\u2019abord à tout'}</div></button>`;
+  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.i;
+    if(i===4&&!mainDone()){modal({title:'🔒 Défi verrouillé',text:'Les défis bonus se débloquent quand tu as répondu à <b>tous les exercices</b> des 4 parties. Les pastilles vertes t\u2019indiquent ce qui est fait.',ok:'Compris',onOk:()=>true});return}
+    S.ui.part=i;save();renderTabs();renderPart();
+  });
+}
+let wasOpen=null;
+function refreshProgress(){
+  const o=mainDone(); if(wasOpen!==null&&o!==wasOpen){wasOpen=o;renderTabs();return refreshDots()} wasOpen=o;
+  PLAN.parts.forEach((p,i)=>{const c=countItems(p);const b=document.querySelectorAll('.tab .bar i')[i];if(b)b.style.width=(100*c.done/c.tot)+'%'});
+  refreshDots();
+}
+function refreshDots(){document.querySelectorAll('[data-done]').forEach(d=>{const ex=findEx(d.dataset.done);if(ex)d.classList.toggle('on',isDone(ex))})}
+function findEx(id){for(const p of allParts())for(const e of p.ex)if(e.id===id)return e}
+
+const INTRO={
+  vocab:{h:'Turtle English',p:'Les commandes de Python turtle sont en anglais : que veulent-elles dire ?',memo:'Clique sur une commande turtle, puis sur ce qu\u2019elle fait. Clique à nouveau sur une commande pour défaire la paire.'},
+  defi:{h:'Défis bonus',p:'Des défis de plus en plus costauds : chaque défi réussi débloque le suivant. Jusqu\u2019où iras-tu ?',memo:'Ici, <b>tests illimités</b> ! Pense aux <b>boucles</b>, et même aux <b>boucles imbriquées</b> (une boucle dans une boucle).'},
+  draw:{h:'Suis le code',p:'Pour chaque programme, dessine le trajet exact décrit par le robot.',memo:'Au départ, <b>la tête du robot est orientée vers le haut</b>. <code>avancer()</code> fait avancer le robot d’un carreau dans la direction où pointe sa tête ; <code>droite()</code> et <code>gauche()</code> font tourner sa tête sur place. Pour dessiner : clique sur un point de la grille aligné avec le crayon 🔴.'},
+  complete:{h:'Complète et corrige',p:'Complète les programmes et chasse les bugs.',memo:'Le bouton <b>▶ Tester</b> fait bouger le robot, mais tu n’as que <b>'+CONFIG.ESSAIS+' essais</b> par exercice. Attention à l’indentation : 4 espaces (touche Tab).'},
+  write:{h:'Écris ton code',p:'Écris toi-même les programmes en entier.',memo:'Commence par <code>from robot import *</code>. Le bouton <b>▶ Tester</b> : '+CONFIG.ESSAIS+' essais par exercice. Indentation : 4 espaces (touche Tab), Maj+Tab pour revenir en arrière.'}
+};
+
+function renderPart(){
+  if(S.ui.part===4&&!mainDone()) S.ui.part=0;
+  const p=allParts()[S.ui.part], it=INTRO[p.key];
+  let html=`<div class="part-head"><div><h2>${p.icon} ${it.h}</h2><p>${it.p}</p></div><div class="memo">${it.memo}</div></div>`;
+  let num=0;
+  const cards=[];
+  if(p.key==='vocab'){
+    const m=p.ex.find(e=>e.kind==='match'), q=p.ex.filter(e=>e.kind==='qcm');
+    cards.push(card(m,'Exercice 1','Match each turtle command with its meaning',`<div id="x-${m.id}"></div>`));
+    cards.push(card({id:'qcm-group',pts:q.reduce((s,e)=>s+e.pts,0)},'Exercice 2','Choisis la bonne réponse',`<div class="qcms" id="x-qcms"></div>`,true));
+  } else {
+    if(p.key==='defi'){
+      const lv=Math.min(S.dlv||0,p.ex.length-1), nb=p.ex.length-1;
+      html+=`<div class="levels">${p.ex.slice(0,nb).map((e,i)=>{const g=gradeEx(e,S.ans);return `<span class="lvl ${g.solved?'ok':''} ${i===lv?'cur':''}">${g.solved?(g.star?'⭐':'✔'):i<lv?'✔':i===lv?'▶':'🔒'} Niveau ${i+1}</span>`}).join('')}<span class="lvl ${lv===nb?'cur':''}">${lv===nb?'🎨':'🔒'} Création libre</span></div>`;
+      const ex=p.ex[lv];
+      cards.push(card(ex,ex.kind==='libre'?'🎨 Création libre':`⭐ Niveau ${ex.level} / ${nb}`,exTitle(ex),`<div id="x-${ex.id}"></div>`,true));
+    } else
+    p.ex.forEach(ex=>{num++;cards.push(card(ex,'Exercice '+num,exTitle(ex),`<div id="x-${ex.id}"></div>`))});
+  }
+  const ni=S.ui.part<PLAN.parts.length-1;
+  html+=cards.join('')+`<div class="next-part">${ni?`<button class="btn primary" id="b-next">Partie suivante →</button>`:`<button class="btn coral" id="b-next">🏁 J'ai terminé</button>`}</div>`;
+  $('#part').innerHTML=html;
+  $('#b-next').onclick=()=>{if(ni){S.ui.part++;save();renderTabs();renderPart();window.scrollTo({top:0,behavior:'smooth'})}else askFinish()};
+  if(p.key==='vocab'){
+    mountMatch($('#x-v-match'),p.ex.find(e=>e.kind==='match'));
+    const box=$('#x-qcms'); p.ex.filter(e=>e.kind==='qcm').forEach((e,i)=>mountQcm(box,e,i));
+  } else p.ex.forEach(ex=>{
+    const el=$('#x-'+ex.id); if(!el) return;
+    if(ex.kind==='draw') mountDraw(el,ex);
+    else if(ex.kind==='trous') mountTrous(el,ex);
+    else mountCode(el,ex);
+  });
+  refreshProgress();
+}
+function card(ex,n,t,body,noDot){
+  return `<article class="ex"><div class="ex-h"><span class="ex-n">${n}</span><span class="ex-t">${t}</span>${ex.bonus?'':`<span class="ex-pts">${fmt(ex.pts)} pt${ex.pts>1?'s':''}</span>`}${noDot?'':`<span class="done-dot" data-done="${ex.id}" title="répondu"></span>`}</div><div class="ex-b">${body}</div></article>`;
+}
+function exTitle(ex){
+  return {draw:'Dessine le trajet du robot',retour:'Ramène le robot à la maison 🏠',trous:'Code à trous',debug:'Chasse aux bugs 🐞',figure:'Reproduis la figure',rect:'Le grand rectangle',defi:'Défi : '+(ex.name||''),libre:'Invente ton dessin'}[ex.kind];
+}
+
+/* ---------- Vocabulaire ---------- */
+const PAIR_COL=['#4b55d6','#ec6a55','#14a07a','#f2b33d','#9b4bd6','#2b9fd8'];
+function mountMatch(el,ex){
+  const a=ans(ex.id); a.pairs=a.pairs||{};
+  let sel=null;
+  function colorOf(li){const keys=ex.left.filter(k=>a.pairs[k]!=null);return keys.indexOf(li)}
+  function draw(){
+    const rightOwner={}; Object.entries(a.pairs).forEach(([l,r])=>rightOwner[r]=+l);
+    el.innerHTML=`<div class="match"><div class="col"><h4>🇬🇧 Commande turtle</h4>${ex.left.map(li=>{
+      const c=a.pairs[li]!=null?PAIR_COL[colorOf(li)]:null;
+      return `<button class="chip en ${sel===li?'sel':''}" data-l="${li}"><span class="tag" style="${c?`background:${c};border:2px solid var(--ink)`:''}"></span>${esc(VOCAB[li][0])}</button>`}).join('')}</div>
+      <div class="col"><h4>🇫🇷 Ce qu\u2019elle fait</h4>${ex.right.map(ri=>{
+      const o=rightOwner[ri]; const c=o!=null?PAIR_COL[colorOf(o)]:null;
+      return `<button class="chip" data-r="${ri}"><span class="tag" style="${c?`background:${c};border:2px solid var(--ink)`:''}"></span>${esc(VOCAB[ri][1])}</button>`}).join('')}</div></div>`;
+    el.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{
+      const li=+b.dataset.l;
+      if(a.pairs[li]!=null){delete a.pairs[li];sel=null}else sel=(sel===li?null:li);
+      saveSoon();draw();refreshProgress();
+    });
+    el.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{
+      const r=+b.dataset.r, o=rightOwner[r];
+      if(o!=null){delete a.pairs[o];}
+      if(sel!=null){a.pairs[sel]=r;sel=null}
+      else if(o==null){el.querySelector('.match').classList.add('flash');setTimeout(()=>el.querySelector('.match')&&el.querySelector('.match').classList.remove('flash'),500)}
+      saveSoon();draw();refreshProgress();
+    });
+  }
+  draw();
+}
+function mountQcm(box,ex,i){
+  const d=document.createElement('div'); d.className='qcm'; box.appendChild(d);
+  const a=ans(ex.id);
+  const en=ex.dir==='en2fr';
+  function draw(){
+    d.innerHTML=`<div class="qp">${en?'Que fait cette commande ?':'Quelle commande turtle permet de…'}</div>
+    <div class="qw ${en?'code':''}">${en?esc(VOCAB[ex.vi][0]):esc(VOCAB[ex.vi][1])+' ?'}</div>
+    <div class="opts">${ex.options.map((o,k)=>`<button class="opt ${en?'':'code'} ${a.choice===o?'on':''}" data-o="${o}"><span class="l">${'ABCD'[k]}</span>${esc(VOCAB[o][en?1:0])}</button>`).join('')}</div>`;
+    d.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{a.choice=+b.dataset.o;saveSoon();draw();refreshProgress()});
+  }
+  draw();
+}
+
+/* ---------- Dessin ---------- */
+function mountDraw(el,ex){
+  const a=ans(ex.id); if(!a.path) a.path=[ex.start.slice()];
+  const N=ex.N;
+  el.innerHTML=`<div class="two"><div>${codeBox(ex.code)}</div>
+    <div class="gridwrap"><div class="g"></div><div class="grid-msg"></div>
+    <div class="grid-tools"><button class="btn small" data-a="undo">↶ Annuler</button><button class="btn small" data-a="clear">🗑 Effacer</button></div></div></div>`;
+  const gEl=el.querySelector('.g'), msg=el.querySelector('.grid-msg');
+  const {s,g}=gridBase(N);
+  let hover=null;
+  function draw(){
+    const p=a.path, last=p[p.length-1];
+    const segs=[]; for(let i=1;i<p.length;i++) segs.push([...p[i-1],...p[i]]);
+    let prev='';
+    if(hover&&(hover[0]===last[0]||hover[1]===last[1])&&!(hover[0]===last[0]&&hover[1]===last[1]))
+      prev=`<path class="preview" d="M${gx(N,last[0])} ${gy(N,last[1])}L${gx(N,hover[0])} ${gy(N,hover[1])}"/>`;
+    let nodes='';
+    for(let x=0;x<=N;x++)for(let y=0;y<=N;y++) nodes+=`<circle class="hit" data-x="${x}" data-y="${y}" cx="${gx(N,x)}" cy="${gy(N,y)}" r="15"/><circle class="node" cx="${gx(N,x)}" cy="${gy(N,y)}" r="3"/>`;
+    gEl.innerHTML=`<svg class="gridsvg" viewBox="0 0 ${s} ${s}" width="${s}">${g}<path class="trail" d="${segPath(N,segs)}"/>${prev}${robotMark(N,ex.start)}
+      <circle class="pen pen-a" cx="${gx(N,last[0])}" cy="${gy(N,last[1])}" r="11"/>${nodes}</svg>`;
+    gEl.querySelectorAll('.hit').forEach(h=>{
+      h.onclick=()=>add(+h.dataset.x,+h.dataset.y);
+      h.onmouseenter=()=>{hover=[+h.dataset.x,+h.dataset.y];drawPrev()};
+    });
+    gEl.querySelector('svg').onmouseleave=()=>{hover=null;drawPrev()};
+  }
+  function drawPrev(){
+    const svg=gEl.querySelector('svg'), old=svg.querySelector('.preview'); if(old) old.remove();
+    const last=a.path[a.path.length-1];
+    if(hover&&(hover[0]===last[0]||hover[1]===last[1])&&!(hover[0]===last[0]&&hover[1]===last[1])){
+      const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('class','preview'); p.setAttribute('d',`M${gx(N,last[0])} ${gy(N,last[1])}L${gx(N,hover[0])} ${gy(N,hover[1])}`);
+      svg.insertBefore(p,svg.querySelector('.robot-start'));
+    }
+  }
+  function add(x,y){
+    const last=a.path[a.path.length-1];
+    if(x===last[0]&&y===last[1]) return;
+    if(x!==last[0]&&y!==last[1]){msg.textContent='Le robot ne se déplace qu’en ligne droite depuis le crayon 🔴';setTimeout(()=>msg.textContent='',2200);return}
+    const dx=Math.sign(x-last[0]),dy=Math.sign(y-last[1]); let cx=last[0],cy=last[1];
+    while(cx!==x||cy!==y){cx+=dx;cy+=dy;a.path.push([cx,cy])}
+    msg.textContent=''; saveSoon(); draw(); refreshProgress();
+  }
+  el.querySelector('[data-a=undo]').onclick=()=>{
+    if(a.path.length<=1) return;
+    // retire le dernier trait droit complet
+    const p=a.path; const n=p.length-1; const dx=p[n][0]-p[n-1][0],dy=p[n][1]-p[n-1][1];
+    p.pop(); while(p.length>1&&p[p.length-1][0]-p[p.length-2][0]===dx&&p[p.length-1][1]-p[p.length-2][1]===dy&&a._seg) p.pop();
+    saveSoon();draw();refreshProgress();
+  };
+  el.querySelector('[data-a=clear]').onclick=()=>{a.path=[ex.start.slice()];saveSoon();draw();refreshProgress()};
+  draw();
+}
+
+/* ---------- Éditeur de code ---------- */
+function mountEditor(host,initial,onChange){
+  host.innerHTML=`<div class="editor"><div class="gut"></div><div class="area"><pre aria-hidden="true"></pre><textarea spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" aria-label="Éditeur de code Python"></textarea></div></div>`;
+  const ta=host.querySelector('textarea'), pre=host.querySelector('pre'), gut=host.querySelector('.gut');
+  ta.value=initial;
+  function paint(){
+    const lines=ta.value.split('\n');
+    pre.innerHTML=lines.map(hlLine).join('\n')+'\n ';
+    gut.textContent=lines.map((_,i)=>i+1).join('\n');
+    const rows=Math.max(10,lines.length+2); host.querySelector('.editor').style.height=(rows*1.6*16+24)+'px';
+  }
+  function sync(){pre.scrollTop=ta.scrollTop;pre.scrollLeft=ta.scrollLeft;gut.scrollTop=ta.scrollTop}
+  function insert(text){
+    ta.focus();
+    if(!document.execCommand||!document.execCommand('insertText',false,text)){
+      const s=ta.selectionStart,e=ta.selectionEnd; ta.setRangeText(text,s,e,'end');
+    }
+    changed();
+  }
+  function changed(){paint();sync();onChange(ta.value)}
+  ta.addEventListener('input',changed);
+  ta.addEventListener('scroll',sync);
+  ta.addEventListener('keydown',e=>{
+    const v=ta.value,s=ta.selectionStart,en=ta.selectionEnd;
+    const ls=v.lastIndexOf('\n',s-1)+1;
+    if(e.key==='Tab'){
+      e.preventDefault();
+      if(s!==en&&v.slice(s,en).includes('\n')||e.shiftKey){
+        // (dé)indentation des lignes sélectionnées
+        const le=v.indexOf('\n',en-(en>s&&v[en-1]==='\n'?1:0)); const end=le<0?v.length:le;
+        const block=v.slice(ls,end).split('\n');
+        const nb=block.map(l=>e.shiftKey?l.replace(/^ {1,4}/,''):'    '+l).join('\n');
+        ta.setSelectionRange(ls,end); insert(nb); ta.setSelectionRange(ls,ls+nb.length);
+      } else {
+        const col=s-ls; insert(' '.repeat(4-col%4));
+      }
+    } else if(e.key==='Enter'){
+      e.preventDefault();
+      const line=v.slice(ls,s); let ind=line.match(/^ */)[0].length;
+      if(stripComment(line).trim().endsWith(':')) ind+=4;
+      insert('\n'+' '.repeat(ind));
+    } else if(e.key==='Backspace'&&s===en&&s>ls){
+      const before=v.slice(ls,s);
+      if(/^ +$/.test(before)){
+        e.preventDefault(); const k=before.length%4||4;
+        ta.setSelectionRange(s-k,s); insert('');
+      }
+    }
+  });
+  paint();
+  return {get:()=>ta.value,set:v=>{ta.value=v;changed()}};
+}
+
+/* ---------- Exercices de code ---------- */
+function consigne(ex){
+  switch(ex.kind){
+    case 'retour': return `Écris la suite du programme pour que le robot <b>retourne à son point de départ</b>, le plus simplement possible. Ne modifie pas les lignes déjà écrites.`;
+    case 'debug': return `Ce programme devrait tracer la figure verte, mais il contient <b>des erreurs</b>. Corrige-le.`;
+    case 'figure': return `Écris un programme Python qui trace exactement la figure verte. Un programme court, avec une <b>boucle for</b>, rapporte plus de points.`;
+    case 'defi': return `Écris un programme qui trace exactement la figure verte. Réussis-le pour débloquer le défi suivant.<br>⭐ <b>Objectif étoile</b> : ${ex.max} lignes maximum, en comptant <code>from robot import *</code>.`+(ex.hint?`<div class="hint">💡 <b>Nouvelle astuce.</b> Dans <code>for i in range(1, 5):</code>, la variable <code>i</code> vaut 1, puis 2, puis 3, puis 4. Tu peux t\u2019en servir dans une autre boucle : <code>for j in range(i):</code> répète i fois. La répétition grandit donc à chaque tour !</div>`:'');
+    case 'libre': return `🏆 <b>Bravo, tu as relevé tous les défis !</b> Invente maintenant ton propre dessin : ton initiale, un personnage, un labyrinthe, une ville… Utilise des boucles et teste autant de fois que tu veux.`;
+    case 'rect': return `Écris un programme pour lequel le trajet du robot est un <b>rectangle de ${ex.W} carreaux de large et ${ex.H} carreaux de haut</b>. Le robot part du coin en bas à gauche, tête vers le haut. Utilise des boucles.`;
+  }
+}
+function mountCode(el,ex){
+  const a=ans(ex.id);
+  const init=ex.kind==='retour'?ex.prefix+'\n':ex.kind==='debug'?ex.bug:'from robot import *\n';
+  if(a.code==null) a.code=init;
+  const showTarget=ex.kind==='debug'||ex.kind==='figure'||ex.kind==='defi';
+  const free=ex.kind==='defi'||ex.kind==='libre';
+  el.innerHTML=`<p class="cons">${consigne(ex)}</p><div class="two"><div><div class="ed"></div>
+    <div class="ed-tools"><button class="btn primary small" data-a="run">▶ Tester</button><button class="btn small" data-a="reset">↺ Recommencer</button><span class="ed-hint">Tab : indenter · Maj+Tab : désindenter</span></div>
+    <div class="console"><span class="dim">Console : le résultat de tes tests s’affiche ici.</span></div></div>
+    <div class="gridwrap"><div class="g"></div>${showTarget?`<div class="legend"><span><i style="background:var(--mint);opacity:.4"></i>figure attendue</span><span><i style="background:var(--robot)"></i>ton robot</span></div>`:''}</div></div>`;
+  const ed=mountEditor(el.querySelector('.ed'),a.code,v=>{a.code=v;saveSoon();refreshProgress()});
+  const gEl=el.querySelector('.g'), con=el.querySelector('.console'), runB=el.querySelector('[data-a=run]');
+  const target=showTarget?segsFromEdges(new Set(ex.expected)):[];
+  function base(segs){gEl.innerHTML=staticGrid(ex.N,ex.start,[{cls:'target',segs:target},{cls:'trail',segs:segs||[]}])}
+  function label(){if(free){runB.textContent='▶ Tester';return}const left=CONFIG.ESSAIS-(S.tests[ex.id]||0);runB.textContent=`▶ Tester (${left} essai${left>1?'s':''})`;runB.disabled=left<=0}
+  function showWin(g){
+    const old=el.querySelector('.win'); if(old) old.remove();
+    const w=document.createElement('div'); w.className='win';
+    w.innerHTML=`<div><b>🎉 Défi « ${esc(ex.name)} » réussi !</b><br>${g.star?'Avec l\u2019étoile, bravo.':'Tu peux encore chercher l\u2019étoile, ou passer à la suite.'}</div><button class="btn primary">Défi suivant →</button>`;
+    w.querySelector('button').onclick=()=>{S.dlv=Math.max(S.dlv||0,ex.level);save();renderPart();window.scrollTo({top:0,behavior:'smooth'})};
+    el.prepend(w);
+  }
+  base(); label();
+  if(ex.kind==='defi'){const g0=gradeEx(ex,S.ans);if(g0.solved)showWin(g0)}
+  runB.onclick=()=>{
+    if(!free&&(S.tests[ex.id]||0)>=CONFIG.ESSAIS) return;
+    S.tests[ex.id]=(S.tests[ex.id]||0)+1; save(); label();
+    const r=runCode(ed.get()), t=trace(r.moves,ex.start);
+    animate(t.segs,()=>{
+      if(ex.kind==='defi'&&!r.error){
+        const g=gradeEx(ex,S.ans);
+        if(g.solved){
+          const nl=countLines(ed.get());
+          con.innerHTML=`<span class="ok">✔ Défi réussi en ${nl} lignes ! ${g.star?'⭐ Objectif étoile atteint !':`Pour l\u2019étoile, essaie en ${ex.max} lignes maximum.`}</span>`;
+          showWin(g); return;
+        }
+      }
+      if(r.error){
+        const ln=ed.get().split('\n')[r.error.line-1];
+        con.innerHTML=`<span class="dim">Traceback (most recent call last):\n  File "main.py", line ${r.error.line}</span>\n    ${esc((ln||'').trim())}\n<span class="err">${r.error.type==='Interdit'?'Instruction non autorisée : '+esc(r.error.message):esc(r.error.type+': '+r.error.message)}</span>`;
+      } else con.innerHTML=`<span class="ok">✔ Programme exécuté : ${t.segs.length} déplacement${t.segs.length>1?'s':''} du robot.</span>`;
+    });
+  };
+  let anim=null;
+  function animate(segs,done){
+    clearInterval(anim); let i=0; const delay=Math.max(25,Math.min(140,2400/(segs.length||1)));
+    base([]); con.innerHTML='<span class="dim">Le robot se déplace…</span>';
+    if(!segs.length){done();return}
+    anim=setInterval(()=>{i++;base(segs.slice(0,i));if(i>=segs.length){clearInterval(anim);done()}},delay);
+  }
+  el.querySelector('[data-a=reset]').onclick=()=>modal({title:'Recommencer ?',text:'Ton code actuel sera effacé et remplacé par le code de départ.',ok:'Oui, recommencer',cancel:'Annuler',onOk:()=>{ed.set(init)}});
+}
+
+/* ---------- Code à trous ---------- */
+function mountTrous(el,ex){
+  const a=ans(ex.id); a.blanks=a.blanks||ex.answers.map(()=>'');
+  let k=0;
+  const lines=ex.tpl.split('\n').map(l=>{
+    const lead=l.match(/^ */)[0]; let g='',i=0; while(i+4<=lead.length){g+='<span class="ig">    </span>';i+=4}
+    const parts=l.slice(lead.length).split(/(\[\[.*?\]\])/);
+    const body=parts.map(p=>{const m=p.match(/^\[\[(.*)\]\]$/); if(!m) return hlTokens(p);
+      const isNum=/^\d+$/.test(m[1]); const idx=k++;
+      return `<input class="blank ${isNum?'num':''}" data-k="${idx}" value="${esc(a.blanks[idx]||'')}" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="case ${idx+1}">`}).join('');
+    return `<span class="ln">${g}${body}</span>`;
+  });
+  el.innerHTML=`<p class="cons">Complète les cases pour que le robot trace exactement la figure verte. Chaque case contient <b>un nombre ou une seule instruction</b>.</p>
+    <div class="two"><div><div class="codebox">${lines.join('')}</div>
+    <div class="ed-tools"><button class="btn primary small" data-a="run">▶ Tester</button></div><div class="console"><span class="dim">Console : le résultat de tes tests s’affiche ici.</span></div></div>
+    <div class="gridwrap"><div class="g"></div><div class="legend"><span><i style="background:var(--mint);opacity:.4"></i>figure attendue</span><span><i style="background:var(--robot)"></i>ton robot</span></div></div></div>`;
+  const gEl=el.querySelector('.g'),con=el.querySelector('.console'),runB=el.querySelector('[data-a=run]');
+  const target=segsFromEdges(new Set(ex.expected));
+  const base=segs=>gEl.innerHTML=staticGrid(ex.N,ex.start,[{cls:'target',segs:target},{cls:'trail',segs:segs||[]}]);
+  base();
+  el.querySelectorAll('.blank').forEach(inp=>inp.oninput=()=>{a.blanks[+inp.dataset.k]=inp.value;saveSoon();refreshProgress()});
+  function label(){const left=CONFIG.ESSAIS-(S.tests[ex.id]||0);runB.textContent=`▶ Tester (${left} essai${left>1?'s':''})`;runB.disabled=left<=0}
+  label();
+  runB.onclick=()=>{
+    if((S.tests[ex.id]||0)>=CONFIG.ESSAIS) return;
+    S.tests[ex.id]=(S.tests[ex.id]||0)+1; save(); label();
+    let j=0; const code=ex.tpl.replace(/\[\[(.*?)\]\]/g,()=>a.blanks[j++]||'');
+    const r=runCode(code), t=trace(r.moves,ex.start);
+    let i=0; const delay=Math.max(25,Math.min(140,2400/(t.segs.length||1)));
+    const it=setInterval(()=>{i++;base(t.segs.slice(0,i));if(i>=t.segs.length){clearInterval(it);fin()}},delay);
+    if(!t.segs.length){clearInterval(it);base([]);fin()}
+    function fin(){con.innerHTML=r.error?`<span class="err">Ligne ${r.error.line} · ${esc(r.error.type+': '+r.error.message)}</span>`:`<span class="ok">✔ Programme exécuté : ${t.segs.length} déplacement${t.segs.length>1?'s':''}.</span>`}
+  };
+}
+
+/* ================= MODALE ================= */
+function modal({title,text,ok,cancel,onOk,onCancel,input}){
+  const root=$('#modal-root');
+  root.innerHTML=`<div class="modal"><div class="box"><h3>${title}</h3><div>${text}</div>${input?`<input type="password" id="m-in" placeholder="${input}">`:''}<div class="m-err" style="color:var(--coral);font-weight:700;min-height:1.2em;margin-top:6px"></div>
+  <div class="acts">${cancel?`<button class="btn" id="m-c">${cancel}</button>`:''}<button class="btn coral" id="m-ok">${ok}</button></div></div></div>`;
+  const close=()=>root.innerHTML='';
+  if(cancel) $('#m-c').onclick=()=>{close();if(onCancel)onCancel()};
+  $('#m-ok').onclick=()=>{const v=input?$('#m-in').value:null; if(onOk(v)!==false) close(); else root.querySelector('.m-err').textContent='Code incorrect.'};
+  if(input) setTimeout(()=>$('#m-in').focus(),50);
+}
+
+/* ================= FIN ================= */
+function askFinish(){
+  let d=0,t=0; PLAN.parts.forEach(p=>{const c=countItems(p);d+=c.done;t+=c.tot});
+  if(d===t&&!S.ans['x-defi-0']&&!S.defiSeen){S.defiSeen=true;save();return modal({title:'⭐ Bravo, tout est rempli !',text:'Il te reste du temps ? Les <b>défis bonus</b> sont débloqués : de plus en plus difficiles, jusqu\u2019où iras-tu ?',cancel:'🏁 Non, j\u2019ai terminé',onCancel:()=>finish(false),ok:'⭐ Voir les défis',onOk:()=>{S.ui.part=4;save();renderTabs();renderPart();window.scrollTo(0,0)}})}
+  modal({title:'Tu as terminé ?',text:`Tu as répondu à <b>${d} exercice${d>1?'s':''} sur ${t}</b>.<br>Une fois validé, tu ne pourras plus modifier tes réponses.`,cancel:'Continuer le DS',ok:'🏁 Oui, j’ai terminé',onOk:()=>finish(false)});
+}
+function finish(auto){
+  clearInterval(timerId);
+  S.finished=true; S.end=Date.now(); S.auto=!!auto; save();
+  showWait();
+}
+function showWait(){
+  $('#wait-bot').innerHTML=botSVG(150);
+  showScreen('s-wait');
+  $('#b-results').onclick=()=>{
+    if(CONFIG.CODE_PROF) modal({title:'Code professeur',text:'Saisis le code pour afficher les résultats.',input:'code',cancel:'Annuler',ok:'Valider',onOk:v=>{if(v===CONFIG.CODE_PROF){showResults();return true}return false}});
+    else showResults();
+  };
+}
+
+/* ================= RÉSULTATS ================= */
+function showResults(){
+  PLAN=PLAN||buildPlan(S.seed);
+  const G=gradeAll(PLAN,S.ans);
+  const dur=Math.round(((S.end||Date.now())-S.start)/60000);
+  const total=Math.round(G.total*4)/4;
+  const pill=r=>`<span class="pill ${r.got>=r.max?'g':r.got>0?'m':'b'}">${fmt(r.got)} / ${fmt(r.max)}</span>`;
+  const parts=G.parts;
+  const tried=G.defis.filter(d=>d.msg!=='non tenté');
+  const defiRows=tried.length?`<tr><th colspan="3">⭐ Défis bonus · ${G.solved} réussi${G.solved>1?'s':''}</th></tr>`+tried.map(r=>{const det=detail(r.ex);return `<tr><td style="width:46%">${r.ex.kind==='libre'?'Création libre':`Niveau ${r.ex.level} : ${esc(r.ex.name)}`}${det?`<details><summary>voir le détail</summary><div class="det">${det}</div></details>`:''}</td><td>${esc(r.msg)}</td><td class="sc">${r.solved?'<span class="pill g">✔</span>':'<span class="pill">·</span>'}</td></tr>`}).join(''):'';
+  const rows=parts.map(P=>{
+    let n=0;
+    return `<tr><th colspan="3">${P.p.icon} ${P.p.title} · ${fmt(P.got)} / ${fmt(P.max)}</th></tr>`+P.rows.map(r=>{
+      n++; const ex=r.ex; let label='', det='';
+      if(ex.kind==='match') label='Association de mots';
+      else if(ex.kind==='qcm') label=`QCM : « ${esc(VOCAB[ex.vi][ex.dir==='en2fr'?0:1])} »`+(S.ans[ex.id]&&S.ans[ex.id].choice!=null?` → ${esc(VOCAB[S.ans[ex.id].choice][ex.dir==='en2fr'?1:0])}`:'');
+      else label=exTitle(ex);
+      det=detail(ex);
+      return `<tr><td style="width:46%">${label}${det?`<details><summary>voir le détail</summary><div class="det">${det}</div></details>`:''}</td><td>${esc(r.msg)}</td><td class="sc">${pill(r)}</td></tr>`;
+    }).join('');
+  }).join('');
+  $('#res').innerHTML=`
+  <div class="res-head"><div><h1>${esc(S.student.prenom)} ${esc(S.student.nom)}</h1>
+    <div class="res-meta"><span>Classe <b>${esc(S.student.classe)}</b></span><span>Sujet n° <b>${S.seed%10000}</b></span><span>Durée <b>${dur} min</b>${S.auto?' (temps écoulé)':''}</span><span>Sorties de la page <b>${S.blurs||0}</b></span><span>${new Date(S.start).toLocaleDateString('fr-FR')}</span></div></div>
+    <div class="note"><div class="v">${fmt(total)}</div><div class="s">sur 20</div></div></div>
+  <div class="res-parts">${parts.map(P=>`<div class="rp"><div class="a">${P.p.icon} ${P.p.title}</div><div class="b">${fmt(P.got)}<span style="font-size:16px;color:var(--ink2)"> / ${fmt(P.max)}</span></div></div>`).join('')}<div class="rp"><div class="a">⭐ Défis bonus</div><div class="b">${G.solved}<span style="font-size:16px;color:var(--ink2)"> réussi${G.solved>1?'s':''}</span></div></div></div>
+  <div class="res-acts"><button class="btn" id="r-print">🖨 Imprimer / PDF</button><button class="btn" id="r-copy">📋 Copier « Nom ; Prénom ; Classe ; Note »</button><button class="btn" id="r-back">← Écran d'attente</button><span class="spacer"></span><button class="btn coral" id="r-new">Nouvel élève (effacer)</button></div>
+  <table class="rtable"><tbody>${rows}${defiRows}</tbody></table>`;
+  showScreen('s-res');
+  $('#r-print').onclick=()=>window.print();
+  $('#r-back').onclick=showWait;
+  $('#r-copy').onclick=()=>{const t=`${S.student.nom};${S.student.prenom};${S.student.classe};${fmt(total)}`;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>$('#r-copy').textContent='✔ Copié').catch(()=>modal({title:'Ligne à copier',text:`<code>${esc(t)}</code>`,ok:'Fermer',onOk:()=>true}))};
+  $('#r-new').onclick=()=>modal({title:'Effacer ce devoir ?',text:'Les réponses et la note de cet élève seront supprimées de cet ordinateur. Pense à noter la note avant.',cancel:'Annuler',ok:'Effacer',input:CONFIG.CODE_PROF?'code professeur':null,onOk:v=>{if(CONFIG.CODE_PROF&&v!==CONFIG.CODE_PROF)return false;try{localStorage.removeItem(KEY)}catch(e){}location.reload();return true}});
+}
+function detail(ex){
+  const a=S.ans[ex.id]||{};
+  if(ex.kind==='draw'){
+    const got=segsFromEdges(edgesFromPath(a.path||[ex.start]));
+    const exp=new Set(ex.expected); const wrong=got.filter(s=>!exp.has(s.join(',')));
+    return codeBox(ex.code)+staticGrid(ex.N,ex.start,[{cls:'target',segs:segsFromEdges(exp)},{cls:'trail',segs:got.filter(s=>exp.has(s.join(',')))},{cls:'wrong',segs:wrong}],180)+legendRes();
+  }
+  if(ex.kind==='trous'){
+    let k=0; const code=ex.tpl.replace(/\[\[(.*?)\]\]/g,()=>(a.blanks&&a.blanks[k++])||'___');
+    const r=runCode(code); return codeBox(code)+staticGrid(ex.N,ex.start,[{cls:'target',segs:segsFromEdges(new Set(ex.expected))},{cls:'trail',segs:trace(r.moves,ex.start).segs}],180)+`<div style="font-size:13px">Attendu : ${ex.answers.map(esc).join(' · ')}</div>`;
+  }
+  if(['retour','debug','figure','rect','defi','libre'].includes(ex.kind)){
+    const code=a.code!=null?a.code:''; const r=runCode(code);
+    const tgt=ex.expected?segsFromEdges(new Set(ex.expected)):ex.kind==='rect'?segsFromEdges(rectEdgesFor(ex)):[];
+    const free=ex.kind==='defi'||ex.kind==='libre';
+    return codeBox(code||'(vide)')+staticGrid(ex.N,ex.start,[{cls:'target',segs:tgt},{cls:'trail',segs:trace(r.moves,ex.start).segs}],180)+`<div style="font-size:13px">Tests utilisés : ${S.tests[ex.id]||0}${free?'':' / '+CONFIG.ESSAIS}</div>`+(ex.kind==='defi'?`<div><div style="font-size:13px;font-weight:700">Une solution :</div>${codeBox(ex.model)}</div>`:'');
+  }
+  return '';
+}
+function rectEdgesFor(ex){return rectEdges(ex.start[0],ex.start[1],ex.W,ex.H)}
+function legendRes(){return `<div class="legend" style="flex-direction:column;gap:4px"><span><i style="background:var(--mint);opacity:.4"></i>attendu</span><span><i style="background:var(--robot)"></i>juste</span><span><i style="background:var(--coral)"></i>en trop</span></div>`}
+
+/* ================= DÉMARRAGE ================= */
+(function boot(){
+  S=load();
+  if(!S) return initHome();
+  PLAN=buildPlan(S.seed);
+  if(S.finished) return showWait();
+  if(!S.start) return showTour();
+  if(Date.now()>S.start+CONFIG.DUREE_MIN*60000) return finish(true);
+  S.ui=S.ui||{part:0};
+  startDS();
+})();
+</script>
+</body>
+</html>
