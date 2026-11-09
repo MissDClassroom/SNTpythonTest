@@ -238,6 +238,20 @@ h1,h2,h3{font-family:var(--f-display);line-height:1.1;margin:0}
 details summary{cursor:pointer;color:var(--robot);font-weight:700;font-size:14px}
 .res-acts{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
 .flash{animation:flash .5s}
+/* ---------- verrouillage anti-sortie ---------- */
+#lock{position:fixed;inset:0;z-index:500;display:grid;place-items:center;padding:16px;background:var(--coral);background-image:repeating-linear-gradient(-45deg,rgba(255,255,255,.07) 0 22px,transparent 22px 44px)}
+#lock .box{background:var(--card);border:3px solid var(--ink);border-radius:22px;box-shadow:10px 10px 0 var(--ink);max-width:520px;width:100%;padding:28px;text-align:center}
+#lock h2{font-size:clamp(28px,5vw,38px);font-weight:800;margin:8px 0 10px}
+#lock p{margin:0 0 10px;color:var(--ink2)}
+#lock .cnt{display:inline-block;background:var(--coral-soft);border:2px solid var(--ink);border-radius:999px;padding:3px 12px;font-weight:700;margin-bottom:14px}
+#lock .prof{border-top:2px dashed var(--line);margin-top:16px;padding-top:16px}
+#lock .prof label{font-weight:700;font-size:14px;display:block;margin-bottom:6px}
+#lock .row{display:flex;gap:8px}
+#lock input{flex:1;min-width:0;border:2px solid var(--ink);border-radius:10px;padding:10px 12px;font:inherit}
+#lock .lk-err{color:var(--coral);font-weight:700;min-height:1.3em;margin-top:6px;font-size:15px}
+.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.warn-line{background:var(--coral-soft);border:2px solid var(--ink);border-radius:12px;padding:10px 12px;font-size:15px;margin:-8px 0 18px;display:flex;gap:10px;align-items:flex-start}
 @keyframes flash{30%{background:var(--coral-soft)}}
 
 @media (max-width:900px){
@@ -289,6 +303,7 @@ details summary{cursor:pointer;color:var(--robot);font-weight:700;font-size:14px
         <li><span class="ic">💾</span><span>Tes réponses sont <b>enregistrées</b> au fur et à mesure.</span></li>
         <li><span class="ic">🏁</span><span>Quand tu as fini (ou à la fin du temps), clique sur <b>Terminé</b>.</span></li>
       </ul>
+      <div class="warn-line"><span>🔒</span><span><b>Interdit de quitter la page</b> (autre onglet, autre fenêtre, autre application) : le DS se bloque et seul le professeur peut le débloquer.</span></div>
       <div class="home-err" id="home-err"></div>
       <button class="btn primary big" id="b-start">Commencer le DS →</button>
     </div>
@@ -334,12 +349,29 @@ details summary{cursor:pointer;color:var(--robot);font-weight:700;font-size:14px
 
 <div id="modal-root"></div>
 
+<!-- ================= VERROUILLAGE ================= -->
+<div id="lock" class="hidden" role="alertdialog" aria-labelledby="lk-t">
+  <div class="box">
+    <div style="font-size:56px;line-height:1">🔒</div>
+    <h2 id="lk-t">DS bloqué</h2>
+    <p>Tu as quitté la page du devoir. Lève la main et <b>attends le professeur</b> : lui seul peut débloquer ton DS.</p>
+    <div class="cnt" id="lk-cnt"></div>
+    <p style="font-size:14px">Le chrono continue de tourner.</p>
+    <div class="prof">
+      <label for="lk-pw">Code professeur</label>
+      <div class="row"><input id="lk-pw" type="password" autocomplete="off" placeholder="••••••"><button class="btn primary" id="lk-ok">Débloquer</button></div>
+      <div class="lk-err" id="lk-err"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ================= RÉGLAGES PROFESSEUR ================= */
 const CONFIG = {
   DUREE_MIN: 90,        // durée de l'épreuve en minutes
   ESSAIS: 3,            // nombre de tests « ▶ Tester » par exercice de code
   CODE_PROF: "",        // si rempli (ex. "snt2"), ce code est demandé pour voir les résultats
+  CODE_DEBLOCAGE: "prof2026", // code à taper pour débloquer un élève qui a quitté la page (à changer !)
   TITRE: "DS SNT · Le robot Python"
 };
 
@@ -946,6 +978,7 @@ function showTour(){
       <div class="console"><span class="ok">✔ Programme exécuté : 8 déplacements du robot.</span></div></div></div>`,
     ()=>`<div class="slide"><div><h3>🏁 Terminer</h3>
       <p>Le <b>chrono de ${CONFIG.DUREE_MIN} minutes</b> démarre quand tu cliques sur « C'est parti ». Il devient orange puis rouge à la fin. À zéro, le DS s'arrête tout seul.</p>
+      <p>🔒 <b>Ne quitte jamais la page</b> : un autre onglet, une autre fenêtre ou une autre application <b>bloquent le DS</b> jusqu'à ce que le professeur le débloque.</p>
       <p>Tes réponses sont enregistrées en continu. Quand tu as fini, clique sur <b>🏁 Terminé</b> : tu ne pourras plus rien modifier.</p>
       <p>⭐ Tu as répondu à tout et il te reste du temps ? Des <b>défis bonus</b> se débloquent, de plus en plus difficiles. Jusqu'où iras-tu ?</p></div>
       <div style="text-align:center">${botSVG(170)}<p style="font-family:var(--f-display);font-size:22px;font-weight:700;margin-top:10px">Bon courage ${esc(S.student.prenom)} !</p></div></div>`
@@ -971,7 +1004,7 @@ function showTour(){
   $('#tour-next').onclick=()=>{
     if(k<slides.length-1){k++;draw();return}
     delete S.ans['demo-draw'];
-    S.start=Date.now(); save(); startDS();
+    S.start=Date.now(); save(); goFullscreen(); startDS();
   };
   showScreen('s-tour'); draw();
 }
@@ -986,6 +1019,7 @@ function startDS(){
   renderTabs(); renderPart();
   $('#b-finish').onclick=askFinish;
   tick(); clearInterval(timerId); timerId=setInterval(tick,1000);
+  if(S.locked) showLock();
 }
 function tick(){
   const left=Math.max(0,S.start+CONFIG.DUREE_MIN*60000-Date.now());
@@ -994,7 +1028,46 @@ function tick(){
   const t=$('#timer'); t.classList.toggle('warn',left<15*60000&&left>=5*60000); t.classList.toggle('alert',left<5*60000);
   if(left<=0){clearInterval(timerId);finish(true)}
 }
-document.addEventListener('visibilitychange',()=>{if(S&&!S.finished&&document.hidden){S.blurs=(S.blurs||0)+1;save()}});
+/* ---------- anti-sortie de page ---------- */
+function guardOn(){return !!(S&&S.start&&!S.finished&&!$('#s-ds').classList.contains('hidden'))}
+function lockDS(reason){
+  if(!guardOn()||S.locked) return;
+  S.locked=true; S.blurs=(S.blurs||0)+1;
+  (S.exits=S.exits||[]).push({t:Date.now(),r:reason});
+  save(); showLock();
+}
+function showLock(){
+  $('#modal-root').innerHTML='';
+  const n=S.blurs||1;
+  $('#lk-cnt').textContent=n>1?`${n}e sortie de la page`:'1re sortie de la page';
+  $('#lk-pw').value=''; $('#lk-err').textContent='';
+  $('#lock').classList.remove('hidden');
+  setTimeout(()=>$('#lk-pw').focus(),50);
+}
+function tryUnlock(){
+  const v=$('#lk-pw').value;
+  if(v===CONFIG.CODE_DEBLOCAGE){
+    S.locked=false; const e=S.exits&&S.exits[S.exits.length-1]; if(e) e.back=Date.now();
+    save(); $('#lock').classList.add('hidden'); goFullscreen();
+  } else {
+    $('#lk-err').textContent='Code incorrect.'; const b=$('#lock .box'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
+    $('#lk-pw').value='';
+  }
+}
+function goFullscreen(){try{const d=document.documentElement;if(!document.fullscreenElement&&d.requestFullscreen)d.requestFullscreen().catch(()=>{})}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.hidden) lockDS('onglet ou fenêtre')});
+let blurT=null;
+window.addEventListener('blur',()=>{clearTimeout(blurT);blurT=setTimeout(()=>{if(!document.hasFocus()) lockDS('autre fenêtre ou application')},700)});
+window.addEventListener('focus',()=>clearTimeout(blurT));
+// raccourcis vers le code source / les outils de développement, et clic droit
+document.addEventListener('keydown',e=>{
+  if(!guardOn()) return;
+  const k=(e.key||'').toLowerCase();
+  if(e.key==='F12'||((e.ctrlKey||e.metaKey)&&(k==='u'||k==='s'||k==='p'))||((e.ctrlKey||e.metaKey)&&(e.shiftKey||e.altKey)&&['i','j','c'].includes(k))){e.preventDefault();e.stopPropagation()}
+},true);
+document.addEventListener('contextmenu',e=>{if(guardOn())e.preventDefault()});
+$('#lk-ok').onclick=tryUnlock;
+$('#lk-pw').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock()});
 
 function isDone(ex){
   const a=S.ans[ex.id]; if(!a) return false;
@@ -1354,6 +1427,8 @@ function askFinish(){
   modal({title:'Tu as terminé ?',text:`Tu as répondu à <b>${d} exercice${d>1?'s':''} sur ${t}</b>.<br>Une fois validé, tu ne pourras plus modifier tes réponses.`,cancel:'Continuer le DS',ok:'🏁 Oui, j’ai terminé',onOk:()=>finish(false)});
 }
 function finish(auto){
+  $('#lock').classList.add('hidden'); S.locked=false;
+  try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}
   clearInterval(timerId);
   S.finished=true; S.end=Date.now(); S.auto=!!auto; save();
   showWait();
@@ -1390,7 +1465,7 @@ function showResults(){
   }).join('');
   $('#res').innerHTML=`
   <div class="res-head"><div><h1>${esc(S.student.prenom)} ${esc(S.student.nom)}</h1>
-    <div class="res-meta"><span>Classe <b>${esc(S.student.classe)}</b></span><span>Sujet n° <b>${S.seed%10000}</b></span><span>Durée <b>${dur} min</b>${S.auto?' (temps écoulé)':''}</span><span>Sorties de la page <b>${S.blurs||0}</b></span><span>${new Date(S.start).toLocaleDateString('fr-FR')}</span></div></div>
+    <div class="res-meta"><span>Classe <b>${esc(S.student.classe)}</b></span><span>Sujet n° <b>${S.seed%10000}</b></span><span>Durée <b>${dur} min</b>${S.auto?' (temps écoulé)':''}</span><span>Sorties de la page <b style="${S.blurs?'color:var(--coral)':''}">${S.blurs||0}</b>${(S.exits||[]).length?` (${S.exits.map(x=>new Date(x.t).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})+(x.back?` → ${new Date(x.back).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`:'')).join(', ')})`:''}</span><span>${new Date(S.start).toLocaleDateString('fr-FR')}</span></div></div>
     <div class="note"><div class="v">${fmt(total)}</div><div class="s">sur 20</div></div></div>
   <div class="res-parts">${parts.map(P=>`<div class="rp"><div class="a">${P.p.icon} ${P.p.title}</div><div class="b">${fmt(P.got)}<span style="font-size:16px;color:var(--ink2)"> / ${fmt(P.max)}</span></div></div>`).join('')}<div class="rp"><div class="a">⭐ Défis bonus</div><div class="b">${G.solved}<span style="font-size:16px;color:var(--ink2)"> réussi${G.solved>1?'s':''}</span></div></div></div>
   <div class="res-acts"><button class="btn" id="r-print">🖨 Imprimer / PDF</button><button class="btn" id="r-copy">📋 Copier « Nom ; Prénom ; Classe ; Note »</button><button class="btn" id="r-back">← Écran d'attente</button><span class="spacer"></span><button class="btn coral" id="r-new">Nouvel élève (effacer)</button></div>
