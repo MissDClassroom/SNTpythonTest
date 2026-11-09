@@ -250,6 +250,9 @@ details summary{cursor:pointer;color:var(--robot);font-weight:700;font-size:14px
 #lock input{flex:1;min-width:0;border:2px solid var(--ink);border-radius:10px;padding:10px 12px;font:inherit}
 #lock .lk-err{color:var(--coral);font-weight:700;min-height:1.3em;margin-top:6px;font-size:15px}
 .shake{animation:shake .35s}
+#b-prof{position:fixed;left:12px;bottom:12px;z-index:90;width:34px;height:34px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);color:var(--muted);font-size:16px;opacity:.55;display:grid;place-items:center;padding:0}
+#b-prof:hover{opacity:1;border-color:var(--ink);color:var(--ink)}
+#lock .reset{background:none;border:0;color:var(--ink2);text-decoration:underline;font-size:14px;margin-top:8px}
 @keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 .warn-line{background:var(--coral-soft);border:2px solid var(--ink);border-radius:12px;padding:10px 12px;font-size:15px;margin:-8px 0 18px;display:flex;gap:10px;align-items:flex-start}
 @keyframes flash{30%{background:var(--coral-soft)}}
@@ -347,6 +350,7 @@ details summary{cursor:pointer;color:var(--robot);font-weight:700;font-size:14px
 <!-- ================= RÉSULTATS ================= -->
 <section id="s-res" class="hidden"><div class="wrap" id="res"></div></section>
 
+<button id="b-prof" class="hidden" title="Professeur" aria-label="Menu professeur">⚙</button>
 <div id="modal-root"></div>
 
 <!-- ================= VERROUILLAGE ================= -->
@@ -361,6 +365,7 @@ details summary{cursor:pointer;color:var(--robot);font-weight:700;font-size:14px
       <label for="lk-pw">Code professeur</label>
       <div class="row"><input id="lk-pw" type="password" autocomplete="off" placeholder="••••••"><button class="btn primary" id="lk-ok">Débloquer</button></div>
       <div class="lk-err" id="lk-err"></div>
+      <button class="reset" id="lk-reset">Réinitialiser la session (tout effacer, retour à l'accueil)</button>
     </div>
   </div>
 </div>
@@ -371,7 +376,7 @@ const CONFIG = {
   DUREE_MIN: 90,        // durée de l'épreuve en minutes
   ESSAIS: 3,            // nombre de tests « ▶ Tester » par exercice de code
   CODE_PROF: "",        // si rempli (ex. "snt2"), ce code est demandé pour voir les résultats
-  CODE_DEBLOCAGE: "prof2026", // code à taper pour débloquer un élève qui a quitté la page (à changer !)
+  CODE_DEBLOCAGE: "prof2026", // code professeur : débloquer un élève ET réinitialiser la session (à changer !)
   TITRE: "DS SNT · Le robot Python"
 };
 
@@ -931,7 +936,16 @@ function staticGrid(N,start,layers,w){
 }
 
 /* ================= ÉCRAN D'ACCUEIL ================= */
-function showScreen(id){['s-home','s-tour','s-ds','s-wait','s-res'].forEach(x=>$('#'+x).classList.toggle('hidden',x!==id));window.scrollTo(0,0)}
+function showScreen(id){['s-home','s-tour','s-ds','s-wait','s-res'].forEach(x=>$('#'+x).classList.toggle('hidden',x!==id));$('#b-prof').classList.toggle('hidden',id==='s-home');window.scrollTo(0,0)}
+/* ---------- réinitialisation (professeur) ---------- */
+function resetAll(){
+  try{localStorage.removeItem(KEY)}catch(e){}
+  S=null; try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}
+  location.reload();
+}
+function askReset(){
+  modal({title:'⚙ Réinitialiser la session',text:`Toutes les réponses de <b>${S?esc(S.student.prenom+' '+S.student.nom):'cet élève'}</b> seront effacées de cet ordinateur et la page reviendra à l\u2019accueil.${S&&S.finished?'<br>Pense à relever la note avant.':''}`,input:'code professeur',cancel:'Annuler',ok:'Réinitialiser',onOk:v=>{if(v!==CONFIG.CODE_DEBLOCAGE)return false;resetAll();return true}});
+}
 function initHome(){
   $('#home-bot').innerHTML=botSVG(92);
   showScreen('s-home');
@@ -1067,6 +1081,11 @@ document.addEventListener('keydown',e=>{
 },true);
 document.addEventListener('contextmenu',e=>{if(guardOn())e.preventDefault()});
 $('#lk-ok').onclick=tryUnlock;
+$('#b-prof').onclick=askReset;
+$('#lk-reset').onclick=()=>{
+  if($('#lk-pw').value===CONFIG.CODE_DEBLOCAGE) return resetAll();
+  $('#lk-err').textContent=$('#lk-pw').value?'Code incorrect.':'Tape d\u2019abord le code professeur, puis clique ici.';
+};
 $('#lk-pw').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock()});
 
 function isDone(ex){
@@ -1474,7 +1493,7 @@ function showResults(){
   $('#r-print').onclick=()=>window.print();
   $('#r-back').onclick=showWait;
   $('#r-copy').onclick=()=>{const t=`${S.student.nom};${S.student.prenom};${S.student.classe};${fmt(total)}`;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>$('#r-copy').textContent='✔ Copié').catch(()=>modal({title:'Ligne à copier',text:`<code>${esc(t)}</code>`,ok:'Fermer',onOk:()=>true}))};
-  $('#r-new').onclick=()=>modal({title:'Effacer ce devoir ?',text:'Les réponses et la note de cet élève seront supprimées de cet ordinateur. Pense à noter la note avant.',cancel:'Annuler',ok:'Effacer',input:CONFIG.CODE_PROF?'code professeur':null,onOk:v=>{if(CONFIG.CODE_PROF&&v!==CONFIG.CODE_PROF)return false;try{localStorage.removeItem(KEY)}catch(e){}location.reload();return true}});
+  $('#r-new').onclick=askReset;
 }
 function detail(ex){
   const a=S.ans[ex.id]||{};
